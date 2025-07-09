@@ -20,10 +20,11 @@
 #include <uuid/uuid.h>
 
 enum TagType {
-    Html, Body, Head, h1, h2, h3, h4, h5, p, String, Image, Input, Button
+    Html, Body, Head, h1, h2, h3, h4, h5, p, String, Image, Input, Button, Div, Stylee, Scriptt
 };
 
-class HTMLTag {
+
+class HTMLTag : public std::enable_shared_from_this<HTMLTag>{
 public:
     TagType type;
     std::vector<std::shared_ptr<HTMLTag>> children;
@@ -37,6 +38,21 @@ public:
             child->render(box);
         }
     }
+
+    void flatten(std::vector<std::shared_ptr<HTMLTag>>& tags){
+        tags.push_back(shared_from_this());
+
+        for(auto& child : children){
+            child->flatten(tags);
+        }
+    }
+};
+
+class Program {
+public:
+    std::vector<std::shared_ptr<HTMLTag>> html_tags;
+    std::vector<std::string> style_srcs;
+    std::vector<std::string> script_srcs;
 };
 
 class BodyTag : public HTMLTag {
@@ -55,6 +71,31 @@ public:
                  GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
         }
         bxx->add_css_class("body");
+        for(auto& child : children){
+            child->render(bxx);
+        }
+    };
+};
+
+class DivTag : public HTMLTag {
+public:
+    DivTag(): HTMLTag(Div) {};
+    Gtk::Box* bxx;
+
+    void render(Gtk::Box* bx) override {
+        bxx = Gtk::manage(new Gtk::Box(Gtk::Orientation::VERTICAL));
+        bxx->set_hexpand(true);
+        bxx->set_valign(Gtk::Align::START);
+        bxx->set_halign(Gtk::Align::START);
+        bx->append(*bxx);
+        if(props.contains("class")) bxx->add_css_class(props["class"]);
+        if(props.contains("style")){
+            css_provider = Gtk::CssProvider::create();
+            css_provider->load_from_data("box {" + props["style"] + "}");
+            bxx->get_style_context()->add_provider(css_provider,
+                 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+        }
+        bxx->add_css_class("div");
         for(auto& child : children){
             child->render(bxx);
         }
@@ -111,6 +152,11 @@ public:
             lab->get_style_context()->add_provider(css_provider,
                  GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
         }
+        if(props.contains("width")){
+            lab->set_max_width_chars(std::stoi(props["width"]));
+        }
+        lab->set_wrap();
+        lab->set_natural_wrap_mode(Gtk::NaturalWrapMode::WORD);
         targ_box->append(*lab);
     }
 };
@@ -126,6 +172,7 @@ public:
                 auto real_child = std::dynamic_pointer_cast<StringTag>(child);
                 if(props.contains("class")) real_child->props["class"] = props["class"]; 
                 if(props.contains("style")) real_child->props["style"] = props["style"];
+                if(props.contains("width")) real_child->props["width"] = props["width"];
                 real_child->renderText(h1, box);
             }
         }
@@ -142,7 +189,7 @@ public:
                 auto real_child = std::dynamic_pointer_cast<StringTag>(child);
                 if(props.contains("class")) real_child->props["class"] = props["class"]; 
                 if(props.contains("style")) real_child->props["style"] = props["style"];
-
+                if(props.contains("width")) real_child->props["width"] = props["width"];
                 real_child->renderText(h2, box);
             }
         }
@@ -159,7 +206,7 @@ public:
                 auto real_child = std::dynamic_pointer_cast<StringTag>(child);
                 if(props.contains("class")) real_child->props["class"] = props["class"];
                 if(props.contains("style")) real_child->props["style"] = props["style"];
- 
+                if(props.contains("width")) real_child->props["width"] = props["width"];
                 real_child->renderText(h3, box);
             }
         }
@@ -176,7 +223,7 @@ public:
                 auto real_child = std::dynamic_pointer_cast<StringTag>(child);
                 if(props.contains("class")) real_child->props["class"] = props["class"]; 
                 if(props.contains("style")) real_child->props["style"] = props["style"];
-
+                if(props.contains("width")) real_child->props["width"] = props["width"];
                 real_child->renderText(h4, box);
             }
         }
@@ -193,7 +240,7 @@ public:
                 auto real_child = std::dynamic_pointer_cast<StringTag>(child);
                 if(props.contains("class")) real_child->props["class"] = props["class"];
                 if(props.contains("style")) real_child->props["style"] = props["style"];
- 
+                if(props.contains("width")) real_child->props["width"] = props["width"];
                 real_child->renderText(h5, box);
             }
         }
@@ -211,7 +258,7 @@ public:
                 auto real_child = std::dynamic_pointer_cast<StringTag>(child);
                 if(props.contains("class")) real_child->props["class"] = props["class"]; 
                 if(props.contains("style")) real_child->props["style"] = props["style"];
-
+                if(props.contains("width")) real_child->props["width"] = props["width"];
                 real_child->renderText(p, box);
             }
         }
@@ -289,4 +336,16 @@ public:
         }
         box->append(*button);
     }
+};
+
+class StyleTag : public HTMLTag{
+public:
+    StyleTag(): HTMLTag(Stylee) {};
+    std::string src;
+};
+
+class ScriptTag : public HTMLTag {
+public:
+    ScriptTag(): HTMLTag(Scriptt) {};
+    std::string src;
 };

@@ -19,18 +19,22 @@ public:
     Tag parseImageTag();
     Tag parseInputTag();
     Tag parseButtonTag();
+    Tag parseDivTag();
+    Tag parseStyleTag();
+    Tag parseScriptTag();
+
     std::unordered_map<std::string, std::string> parseProps();
 
     std::shared_ptr<HTMLTag> parseHtmlTag();
 
-    std::vector<std::shared_ptr<HTMLTag>> produceAst(std::vector<Token> tok_vec){
+    Program produceAst(std::vector<Token> tok_vec){
         itr = tok_vec.begin();
         std::vector<std::shared_ptr<HTMLTag>> tag_vec;
         while(itr->type != EndOfFile){
             tag_vec.push_back(parseHtmlTag());
         }
 
-        return tag_vec;
+        return { tag_vec, {}, {} };
     }
 
 

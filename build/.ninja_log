@@ -1,0 +1,17 @@
+# ninja log v5
+14	3044	1752006697305845688	CMakeFiles/Browser.dir/src/Interpreter/Parser.cpp.o	cda7b0d22e65141c
+40	901	1752003077708254888	CMakeFiles/Browser.dir/src/Interpreter/Lexer.cpp.o	f780f2d519a1d146
+18	80	1752069433906809690	build.ninja	67fa3e70ce0a1499
+13	7248	1752006701506109067	CMakeFiles/Browser.dir/src/source.cpp.o	2755ddf7f68c9323
+41	7841	1751913629214142659	CMakeFiles/Browser.dir/src/HttpManager/HttpManager.cpp.o	9fb026415e77c4c
+7248	7719	1752006701981138775	Browser	7edcc84d418249e8
+49	908	1752070882979892115	CMakeFiles/Browser.dir/src/Interpreter/Lexer.cpp.o	f780f2d519a1d146
+49	3148	1752070885216944556	CMakeFiles/Browser.dir/src/Interpreter/Parser.cpp.o	cda7b0d22e65141c
+48	7559	1752070889624047949	CMakeFiles/Browser.dir/src/source.cpp.o	2755ddf7f68c9323
+7559	8104	1752070890171060790	Browser	7edcc84d418249e8
+15	760	1752071064611233561	CMakeFiles/Browser.dir/src/Interpreter/Lexer.cpp.o	f780f2d519a1d146
+15	3122	1752071066970290938	CMakeFiles/Browser.dir/src/Interpreter/Parser.cpp.o	cda7b0d22e65141c
+14	7503	1752071071346397435	CMakeFiles/Browser.dir/src/source.cpp.o	2755ddf7f68c9323
+7503	7977	1752071071824409072	Browser	7edcc84d418249e8
+39	2857	1752071121946634235	CMakeFiles/Browser.dir/src/Interpreter/Parser.cpp.o	cda7b0d22e65141c
+2857	3371	1752071122459646823	Browser	7edcc84d418249e8

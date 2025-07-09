@@ -1,0 +1,3 @@
+/home/thinkable/vscodeprojects/Browser/build/CMakeFiles/Browser.dir
+/home/thinkable/vscodeprojects/Browser/build/CMakeFiles/edit_cache.dir
+/home/thinkable/vscodeprojects/Browser/build/CMakeFiles/rebuild_cache.dir

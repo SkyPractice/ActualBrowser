@@ -1,0 +1,7 @@
+.hello {
+    background-image: none;
+    min-width: 500px;
+    min-height: 500px;
+    background-color: red;
+    border-radius: 250px;
+}

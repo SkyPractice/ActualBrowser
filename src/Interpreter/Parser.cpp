@@ -31,6 +31,12 @@ std::shared_ptr<HTMLTag> Parser::parseHtmlTag() {
     return parseInputTag();
   case IMAGE:
     return parseImageTag();
+  case DIV:
+    return parseDivTag();
+  case OPENSTYLE:
+    return parseStyleTag();
+  case OPENSCRIPT:
+    return parseScriptTag();
   default:
     throw std::runtime_error(("Unknown Token " + itr->symbol).c_str());
   }
@@ -66,7 +72,17 @@ Tag Parser::parseBodyTag(){
     advance();
     return tag;
 };
+Tag Parser::parseDivTag(){
+    const Token html_tok = advance();
+    const auto tag = std::make_shared<DivTag>();
+    tag->props = parseProps();
 
+    while(itr->type != CLOSEDIV){
+        tag->children.push_back(parseHtmlTag());
+    }
+    advance();
+    return tag;
+};
 Tag Parser::parseHTag(TokenType t){
     const Token h_tok = advance();
     if (t == H1) {
@@ -179,5 +195,30 @@ Tag Parser::parseButtonTag(){
     }
     advance();
 
+    return tag;
+};
+
+Tag Parser::parseStyleTag() {
+    const Token tok = advance();
+    const auto tag = std::make_shared<StyleTag>();
+    tag->props = parseProps();
+    for(auto& prop : tag->props){
+        if(prop.first == "src"){
+            tag->src = prop.second;
+        }
+    }
+    advance();
+    return tag;
+};
+Tag Parser::parseScriptTag() {
+    const Token tok = advance();
+    const auto tag = std::make_shared<ScriptTag>();
+    tag->props = parseProps();
+    for(auto& prop : tag->props){
+        if(prop.first == "src"){
+            tag->src = prop.second;
+        }
+    }
+    advance();
     return tag;
 };
