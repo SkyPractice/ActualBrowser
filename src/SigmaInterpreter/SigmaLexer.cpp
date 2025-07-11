@@ -53,6 +53,9 @@ std::vector<SigmaToken> SigmaLexer::tokenize(std::string code) {
             } else if (the_str == "|" && code [current_pos + 1] == '|'){
                 the_str.push_back('&');
                 advance();
+            } else if(the_str == "=" && code [current_pos + 1] == '='){
+                the_str.push_back('=');
+                advance();
             }
 
             if(known_tokens.contains(the_str))
@@ -64,7 +67,7 @@ std::vector<SigmaToken> SigmaLexer::tokenize(std::string code) {
         }
     }
 
-
+    tokens.push_back({ ENDOFFILETOK, "0" });
     actual_code = nullptr;
     current_char = '0';
     current_pos = 0;

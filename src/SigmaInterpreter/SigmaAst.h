@@ -10,7 +10,8 @@ enum SigmaAstType {
     StructDeclerationType, IncludeType, IfStatementType, ElseIfStatementType, ElseStatementType,
     WhileStatementType, ForStatementType, ArrayExpressionType, IndexAccessExpressionType,
     IndexReInitStatementType,
-    MemberAccessExpressionType, PropertyDeclerationType, NameSpaceType, IdentifierExpressionType
+    MemberAccessExpressionType, PropertyDeclerationType, NameSpaceType, IdentifierExpressionType,
+    FunctionCallExpressionType, ContinueStatementType, ReturnStatementType, BreakStatementType
 };
 
 class Statement {
@@ -19,10 +20,10 @@ public:
     Statement(SigmaAstType t): type(t) {};
 };
 
-class Program : public Statement {
+class SigmaProgram : public Statement {
 public:
     std::vector<std::shared_ptr<Statement>> stmts;
-    Program(std::vector<std::shared_ptr<Statement>>& statements): Statement(ProgramType),
+    SigmaProgram (std::vector<std::shared_ptr<Statement>>& statements): Statement(ProgramType),
         stmts(statements) {};
 };
 
@@ -74,9 +75,10 @@ class VariableDecleration : public Expression {
 public:
     std::string var_name;
     std::shared_ptr<Expression> expr;
+    bool is_const;
 
-    VariableDecleration(std::string name, std::shared_ptr<Expression> val):
-        Expression(VariableDeclerationType), var_name(name), expr(val) {};
+    VariableDecleration(std::string name, std::shared_ptr<Expression> val, bool is_constant):
+        Expression(VariableDeclerationType), var_name(name), expr(val), is_const(is_constant) {};
 };
 
 class VariableReInit : public Expression {
@@ -161,9 +163,9 @@ public:
 
 class ArrayExpression : public Expression {
 public:
-    std::vector<Expression> exprs;
+    std::vector<std::shared_ptr<Expression>> exprs;
 
-    ArrayExpression(std::vector<Expression> expressions): Expression(ArrayExpressionType),
+    ArrayExpression(std::vector<std::shared_ptr<Expression>> expressions): Expression(ArrayExpressionType),
         exprs(expressions) {};
 };
 
@@ -177,24 +179,59 @@ public:
         Expression(LambdaExpressionType), params(parameters), stmts(statements) {};
 };
 
+class FunctionCallExpression : public Expression {
+public:
+    std::string func_name;
+    std::vector<std::shared_ptr<Expression>> args;
+
+    FunctionCallExpression(std::string name, std::vector<std::shared_ptr<Expression>> arguments):
+        Expression(FunctionCallExpressionType), func_name(name), args(arguments) {};
+};
+
 class IndexAccessExpression : public Expression {
 public:
     std::shared_ptr<Expression> array_expr;
-    std::vector<Expression> path;
+    std::vector<std::shared_ptr<Expression>> path;
 
     IndexAccessExpression(std::shared_ptr<Expression> array_expression,
-        std::vector<Expression> access_path): Expression(IndexAccessExpressionType),
+        std::vector<std::shared_ptr<Expression>> access_path): Expression(IndexAccessExpressionType),
         array_expr(array_expression), path(access_path) {};
 };
 
 class IndexReInitStatement : public Statement {
 public:
     std::shared_ptr<Expression> array_expr;
-    std::vector<Expression> path;
+    std::vector<std::shared_ptr<Expression>> path;
     std::shared_ptr<Expression> val;
 
     IndexReInitStatement(std::shared_ptr<Expression> array_expression,
-        std::vector<Expression> access_path,
+        std::vector<std::shared_ptr<Expression>> access_path,
         std::shared_ptr<Expression> value): Statement(IndexReInitStatementType),
         array_expr(array_expression), path(access_path), val(value) {};
+};
+
+class ContinueStatement : public Statement {
+public:
+    ContinueStatement(): Statement(ContinueStatementType) {};
+};
+
+class BreakStatement : public Statement {
+public:
+    BreakStatement(): Statement(BreakStatementType) {};
+};
+
+class ReturnStatement : public Statement {
+public:
+    std::shared_ptr<Expression> expr;
+    ReturnStatement(std::shared_ptr<Expression> expression): Statement(ReturnStatementType),
+        expr(expression) {};
+};
+
+class StructDeclerationStatement : public Statement {
+public:
+    std::string struct_name;
+    std::vector<std::string> props;
+
+    StructDeclerationStatement(std::string struc_name, std::vector<std::string> properties):
+        Statement(StructDeclerationType), struct_name(struc_name), props(properties) {};
 };
