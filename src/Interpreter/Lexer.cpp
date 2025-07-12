@@ -24,7 +24,6 @@ std::vector<Token> Lexer::tokenize(std::string code){
             if(known_tokens.contains(str))
                 tokens.push_back({ known_tokens[str], str });
             if(current_char == '>')advance();
-            std::cout << "current_char: " << current_char << std::endl;
             if(current_char == ' '){
                 while (current_char != '>' && current_char != '\0' && current_pos < current_code->size() - 1) {
                         while(skip_chars.contains(current_char))
@@ -37,7 +36,6 @@ std::vector<Token> Lexer::tokenize(std::string code){
                             
                         }
                         tokens.push_back({PROPNAME, prop_name});
-                        std::cout << "prop_name: " << prop_name << '\n';
                         if(current_char == '='){
                             advance();
                             if(current_char == '\"' || current_char == '\''){
@@ -65,9 +63,6 @@ std::vector<Token> Lexer::tokenize(std::string code){
             }
             tokens.push_back({ STRING, str });
         }
-    }
-    for(auto& token : tokens){
-        std::cout << token.symbol << '\n';
     }
     tokens.push_back({ EndOfFile, "0" });
     return tokens;

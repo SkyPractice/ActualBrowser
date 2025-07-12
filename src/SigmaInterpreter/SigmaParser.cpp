@@ -159,7 +159,7 @@ Expr SigmaParser::parsePrimaryExpr() {
             return parseArrayExpr();
         case New:
             return parseStructExpr();
-
+        default: throw std::runtime_error("Expression Type Not Implemented");
     }
 };
 Expr SigmaParser::parseLambdaExpr() {
@@ -309,7 +309,7 @@ Stmt SigmaParser::parseForLoop() {
     }
     advance();
 
-    return std::make_shared<ForLoopStatement>(first_stmt, expr, last_stmt, stmts);
+    return std::make_shared<ForLoopStatement>(expr, stmts, first_stmt, last_stmt);
 };
 
 Stmt SigmaParser::parseStructDeclerationStmt(){

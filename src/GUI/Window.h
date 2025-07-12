@@ -17,7 +17,6 @@
 #include "../Interpreter/Lexer.h"
 #include "../Interpreter/Parser.h"
 #include "../Interpreter/Interpreter.h"
-#include <iostream>
 #include <gtkmm/scrolledwindow.h>
 
 class BrowserWindow : public Gtk::Window {

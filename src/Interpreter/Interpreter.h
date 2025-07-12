@@ -1,6 +1,5 @@
 #pragma once
 #include "Ast.h"
-#include "Parser.h"
 #include <fstream>
 #include <gdkmm/display.h>
 #include <glibmm/refptr.h>
@@ -56,8 +55,11 @@ public:
 
                     file_stream.close();
 
+                    std::cout << "Reached Lexing" << std::endl;
                     auto tokens = scripting_lexer.tokenize(code);
+                    std::cout << "Successfully Lexed" << std::endl;
                     auto ast = scripting_parser.produceAst(tokens);
+                    std::cout << "Successfully parsed" << std::endl;
                     auto result = scripting_interpreter.evaluate(ast);
                 }
             }

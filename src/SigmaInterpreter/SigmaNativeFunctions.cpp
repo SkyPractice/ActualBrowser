@@ -28,7 +28,9 @@ RunTimeValue SigmaInterpreter::toString(std::vector<RunTimeValue> args) {
             case NumType:
                 return std::make_shared<StringVal>(
                     std::to_string(std::dynamic_pointer_cast<NumVal>(args[0])->num));
+            default: throw std::runtime_error("Type Not Convertable To String");
         }
+        return nullptr;
     } else return std::make_shared<StringVal>("");
 };
 

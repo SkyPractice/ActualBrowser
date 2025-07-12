@@ -15,12 +15,17 @@ public:
     RunTimeVal(RunTimeValType t): type(t) {};
 
     virtual ~RunTimeVal() {};
+    virtual std::string getString() = 0;
 };
 
 class NumVal : public RunTimeVal {
 public:
     double num;
     NumVal(double number): RunTimeVal(NumType), num(number) {};
+
+    std::string getString() override {
+        return std::to_string(num);
+    };
 };
 
 // deprecated
@@ -28,18 +33,33 @@ class StringVal : public RunTimeVal {
 public:
     std::string str;
     StringVal(std::string stri): RunTimeVal(StringType), str(stri) {};
+
+    std::string getString() override {
+        return str;
+    };
 };
 
 class CharVal : public RunTimeVal {
 public:
     char ch;
     CharVal(char cha): RunTimeVal(CharType), ch(cha) {};
+
+    std::string getString() override {
+        std::string str;
+        str.push_back(ch);
+        return str;
+    };
 };
 
 class BoolVal : public RunTimeVal {
 public:
     bool boolean;
     BoolVal(bool boolea): RunTimeVal(BoolType), boolean(boolea) {};
+
+    std::string getString() override {
+        if(boolean) return "true";
+        else return "false";
+    };
 };
 
 class LambdaVal : public RunTimeVal {
@@ -49,7 +69,11 @@ public:
 
     LambdaVal(std::vector<std::string> parameters,
         std::vector<std::shared_ptr<Statement>> statements):
-        RunTimeVal(LambdaType), params(parameters), stmts(statements) {};
+        RunTimeVal(LambdaType), params(parameters), stmts(statements) {}; 
+
+    std::string getString() override {
+        return "<Lambda>";
+    };
 };
 
 class ArrayVal : public RunTimeVal {
@@ -58,6 +82,15 @@ public:
 
     ArrayVal(std::vector<std::shared_ptr<RunTimeVal>> values):
         RunTimeVal(ArrayType), vals(values) {};
+    std::string getString() override {
+        std::string str = "[ ";
+        for(auto val : vals){
+            std::string strr = val->getString();
+            str += strr;
+            str += " ";
+        }
+        return str;
+    }
 };
 
 class StructVal : public RunTimeVal {
@@ -66,4 +99,7 @@ public:
 
     StructVal(std::unordered_map<std::string, std::shared_ptr<RunTimeVal>> values):
         RunTimeVal(StructType), vals(values) {};
+    std::string getString() override {
+        return "<struct>";
+    }
 };

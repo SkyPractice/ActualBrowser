@@ -71,4 +71,6 @@ std::vector<SigmaToken> SigmaLexer::tokenize(std::string code) {
     actual_code = nullptr;
     current_char = '0';
     current_pos = 0;
+
+    return tokens;
 };

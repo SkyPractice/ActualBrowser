@@ -2,9 +2,7 @@
 #include "RunTime.h"
 #include "SigmaAst.h"
 #include <algorithm>
-#include <exception>
 #include <memory>
-#include <iostream>
 #include <stdexcept>
 
 SigmaInterpreter::SigmaInterpreter(){
@@ -33,14 +31,17 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
         }
         case BinaryExpressionType:
             return evaluateBinaryExpression(std::dynamic_pointer_cast<BinaryExpression>(stmt));
+        case ProgramType:
+            return evaluateProgram(std::dynamic_pointer_cast<SigmaProgram>(stmt));    
         case VariableDeclerationType:
             return evaluateVariableDeclStatement(std::dynamic_pointer_cast<VariableDecleration>(stmt));
         case VariableReInitializationType:
             return evaluateVariableReInitStatement(std::dynamic_pointer_cast<VariableReInit>(stmt));
         case FunctionCallExpressionType:
             return evaluateFunctionCallExpression(std::dynamic_pointer_cast<FunctionCallExpression>(stmt));
-            
-        default: throw std::runtime_error("Not Implemented");
+        case IdentifierExpressionType:
+            return current_scope->getVal(std::dynamic_pointer_cast<IdentifierExpression>(stmt)->str);
+        default: throw std::runtime_error("Not Implemented " + std::to_string(stmt->type));
     }
 };
 
@@ -174,9 +175,9 @@ RunTimeValue SigmaInterpreter::evaluateBooleanBinaryExpression(std::shared_ptr<B
 RunTimeValue SigmaInterpreter::evaluateStringBinaryExpression(std::shared_ptr<StringVal> left,
     std::shared_ptr<StringVal> right, std::string op) {
     if(op == "==")
-        return std::make_shared<StringVal>(left->str == right->str);
+        return std::make_shared<BoolVal>(left->str == right->str);
     if(op == "!=")
-        return std::make_shared<StringVal>(left->str != right->str);
+        return std::make_shared<BoolVal>(left->str != right->str);
     if(op == ">")
         return std::make_shared<BoolVal>(left->str > right->str);
     if(op == "<")

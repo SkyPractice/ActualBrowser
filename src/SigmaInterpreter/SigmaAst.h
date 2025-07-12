@@ -18,6 +18,8 @@ class Statement {
 public:
     SigmaAstType type;
     Statement(SigmaAstType t): type(t) {};
+
+    virtual ~Statement() {};
 };
 
 class SigmaProgram : public Statement {
@@ -29,8 +31,7 @@ public:
 
 class Expression : public Statement {
 public:
-    SigmaAstType expression_type;
-    Expression(SigmaAstType expr_type): Statement(ExpressionType), expression_type(expr_type) {};
+    Expression(SigmaAstType expr_type): Statement(expr_type) {};
 };
 
 class BinaryExpression : public Expression {

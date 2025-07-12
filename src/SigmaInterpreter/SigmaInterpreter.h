@@ -28,10 +28,10 @@ public:
         return nullptr;
     };
 
-    Variable getVal(std::string var_name){
+    RunTimeValue getVal(std::string var_name){
         auto scope = traverse(var_name);
         if(!scope){ throw std::runtime_error("variable " + var_name + " not found"); };
-        return scope->variables[var_name];
+        return scope->variables[var_name].value;
     };
 
     // shadowing is allowed
