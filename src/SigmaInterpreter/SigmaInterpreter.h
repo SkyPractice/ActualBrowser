@@ -10,10 +10,15 @@ typedef std::shared_ptr<Statement> Stmt;
 typedef std::shared_ptr<Expression> Expr;
 typedef std::shared_ptr<RunTimeVal> RunTimeValue;
 
+struct Variable {
+    RunTimeValue value;
+    bool is_const;
+};
+
 class Scope : public std::enable_shared_from_this<Scope>{
 public: 
     std::shared_ptr<Scope> parent;
-    std::unordered_map<std::string, RunTimeValue> variables;
+    std::unordered_map<std::string, Variable> variables;
 
     Scope(std::shared_ptr<Scope> p): parent(p) {};
 
@@ -23,21 +28,22 @@ public:
         return nullptr;
     };
 
-    RunTimeValue getVal(std::string var_name){
+    Variable getVal(std::string var_name){
         auto scope = traverse(var_name);
         if(!scope){ throw std::runtime_error("variable " + var_name + " not found"); };
         return scope->variables[var_name];
     };
 
     // shadowing is allowed
-    void declareVar(std::string name, RunTimeValue val){
+    void declareVar(std::string name, Variable val){
         variables[name] = val;
     };
 
-    void reInitVar(std::string name, RunTimeValue val){
+    void reInitVar(std::string name, std::shared_ptr<RunTimeVal> val){
         auto scope = traverse(name);
-        if(!scope) { throw std::runtime_error("variable " + name + " not found"); };
-        scope->variables[name] = val;
+        if(!scope) { throw std::runtime_error("identifier " + name + " not found"); };
+        if(scope->variables[name].is_const) { throw std::runtime_error("Can't ReInitialize A Variable Marked As A Const"); };
+        scope->variables[name].value = val;
     }
 };
 
@@ -58,7 +64,12 @@ public:
         std::shared_ptr<BoolVal> right, std::string op);
     RunTimeValue evaluateStringBinaryExpression(std::shared_ptr<StringVal> left,
         std::shared_ptr<StringVal> right, std::string op);
+    RunTimeValue evaluateFunctionCallExpression(std::shared_ptr<FunctionCallExpression> expr);
 
+    // Shadowing Is Allowed
+    RunTimeValue evaluateVariableDeclStatement(std::shared_ptr<VariableDecleration> decl);
+    RunTimeValue evaluateVariableReInitStatement(std::shared_ptr<VariableReInit> decl);
+    
     static RunTimeValue println(std::vector<RunTimeValue> args);
     static RunTimeValue toString(std::vector<RunTimeValue> args);
     static RunTimeValue numIota(std::vector<RunTimeValue> args);

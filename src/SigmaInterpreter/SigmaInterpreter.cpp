@@ -33,8 +33,17 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
         }
         case BinaryExpressionType:
             return evaluateBinaryExpression(std::dynamic_pointer_cast<BinaryExpression>(stmt));
+        case VariableDeclerationType:
+            return evaluateVariableDeclStatement(std::dynamic_pointer_cast<VariableDecleration>(stmt));
+        case VariableReInitializationType:
+            return evaluateVariableReInitStatement(std::dynamic_pointer_cast<VariableReInit>(stmt));
+        case FunctionCallExpressionType:
+            return evaluateFunctionCallExpression(std::dynamic_pointer_cast<FunctionCallExpression>(stmt));
+            
+        default: throw std::runtime_error("Not Implemented");
     }
 };
+
 RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> program) {
     current_scope = std::make_shared<Scope>(nullptr);
 
@@ -70,6 +79,31 @@ RunTimeValue SigmaInterpreter::evaluateBinaryExpression(std::shared_ptr<BinaryEx
 
     throw std::runtime_error("Binary Operators Not Implemented For Operands " + 
         std::to_string((int)left->type) + "," + std::to_string((int)right->type));
+};
+
+RunTimeValue SigmaInterpreter::evaluateVariableDeclStatement(std::shared_ptr<VariableDecleration> decl) {
+    current_scope->declareVar(decl->var_name, { evaluate(decl->expr),
+         decl->is_const });
+    return nullptr;
+};
+
+RunTimeValue SigmaInterpreter::evaluateVariableReInitStatement(std::shared_ptr<VariableReInit> decl) {
+    current_scope->reInitVar(decl->var_name, evaluate(decl->expr));
+    return nullptr;
+};
+
+RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<FunctionCallExpression> expr) {
+    if(native_functions.contains(expr->func_name)){
+        std::vector<RunTimeValue> args(expr->args.size());
+
+        std::transform(expr->args.begin(), expr->args.end(), args.begin(),
+            [this](Expr& expr){ return evaluate(expr); });
+        
+        return native_functions[expr->func_name](args);
+    } else {
+        // not implemented
+        return nullptr;
+    }
 };
 
 RunTimeValue SigmaInterpreter::evaluateNumericBinaryExpression(std::shared_ptr<NumVal> left,
@@ -136,6 +170,7 @@ RunTimeValue SigmaInterpreter::evaluateBooleanBinaryExpression(std::shared_ptr<B
 
     throw std::runtime_error("operator " + op + " isn't valid between operands Boolean, Boolean");
 };
+// deprecated
 RunTimeValue SigmaInterpreter::evaluateStringBinaryExpression(std::shared_ptr<StringVal> left,
     std::shared_ptr<StringVal> right, std::string op) {
     if(op == "==")

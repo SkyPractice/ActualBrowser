@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <sys/cdefs.h>
 #include <vector>
 #include "SigmaAst.h"
 #include <unordered_map>
@@ -22,6 +23,7 @@ public:
     NumVal(double number): RunTimeVal(NumType), num(number) {};
 };
 
+// deprecated
 class StringVal : public RunTimeVal {
 public:
     std::string str;
