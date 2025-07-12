@@ -41,8 +41,95 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
             return evaluateFunctionCallExpression(std::dynamic_pointer_cast<FunctionCallExpression>(stmt));
         case IdentifierExpressionType:
             return current_scope->getVal(std::dynamic_pointer_cast<IdentifierExpression>(stmt)->str);
+        
         default: throw std::runtime_error("Not Implemented " + std::to_string(stmt->type));
     }
+};
+
+RunTimeValue SigmaInterpreter::evaluateIfStatement(std::shared_ptr<IfStatement> if_stmt) {
+    auto expr = evaluate(if_stmt->expr);
+    if(expr->type != BoolType)
+        throw std::runtime_error("if statement expression must result in a boolean value");
+    if(std::dynamic_pointer_cast<BoolVal>(expr)->boolean){
+        auto scope = std::make_shared<Scope>(current_scope);
+        current_scope = scope;
+
+        for(auto& stmt : if_stmt->stmts){
+            auto result = evaluate(stmt);
+        }
+
+        current_scope = current_scope->parent;
+    } else {
+        for(auto& else_if_stmt : if_stmt->else_if_stmts){
+            auto else_if_expr = evaluate(if_stmt->expr);
+
+            if(else_if_expr->type != BoolType){
+                throw std::runtime_error("elseif statement expression must result in a boolean value"); 
+            } 
+        
+            if(std::dynamic_pointer_cast<BoolVal>(else_if_expr)->boolean){
+                auto scope = std::make_shared<Scope>(current_scope);
+                current_scope = scope;
+
+                for(auto& stmt : else_if_stmt->stmts){
+                    auto result = evaluate(stmt);
+                }
+
+                current_scope = current_scope->parent;
+                return nullptr;
+            
+            }
+        }
+
+        if(if_stmt->else_stmt) {
+            auto scope = std::make_shared<Scope>(current_scope);
+            current_scope = scope;
+
+            for(auto& stmt : if_stmt->else_stmt->stmts){
+                auto result = evaluate(stmt);
+            }
+
+            current_scope = current_scope->parent;
+            return nullptr; 
+        }
+    }
+
+    return nullptr;
+};
+RunTimeValue SigmaInterpreter::evaluateWhileLoopStatement(std::shared_ptr<WhileLoopStatement> while_loop) {
+    while(std::dynamic_pointer_cast<BoolVal>(evaluate(while_loop->expr))->boolean){
+        auto scope = std::make_shared<Scope>(current_scope);
+        current_scope = scope;
+
+        for(auto& stmt : while_loop->stmts){
+            auto result = evaluate(stmt);
+        }
+
+        current_scope = current_scope->parent;
+    }
+
+    return nullptr;
+};
+RunTimeValue SigmaInterpreter::evaluateForLoopStatement(std::shared_ptr<ForLoopStatement> for_loop) {
+    auto scope = std::make_shared<Scope>(current_scope);
+    current_scope = scope;
+    evaluate(for_loop->first_stmt);
+
+    while(std::dynamic_pointer_cast<BoolVal>(for_loop->expr)->boolean){
+        auto sc = std::dynamic_pointer_cast<Scope>(current_scope);
+        current_scope = sc;
+
+        for(auto& stmt : for_loop->stmts){
+            auto result = evaluate(stmt);
+        }
+
+        evaluate(for_loop->last_stmt);
+        current_scope = current_scope->parent;
+    }
+
+    current_scope = current_scope->parent;
+
+    return nullptr;
 };
 
 RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> program) {

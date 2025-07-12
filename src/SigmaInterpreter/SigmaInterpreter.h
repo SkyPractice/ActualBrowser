@@ -69,6 +69,9 @@ public:
     // Shadowing Is Allowed
     RunTimeValue evaluateVariableDeclStatement(std::shared_ptr<VariableDecleration> decl);
     RunTimeValue evaluateVariableReInitStatement(std::shared_ptr<VariableReInit> decl);
+    RunTimeValue evaluateIfStatement(std::shared_ptr<IfStatement> if_stmt);
+    RunTimeValue evaluateWhileLoopStatement(std::shared_ptr<WhileLoopStatement> while_loop);
+    RunTimeValue evaluateForLoopStatement(std::shared_ptr<ForLoopStatement> for_loop);
     
     static RunTimeValue println(std::vector<RunTimeValue> args);
     static RunTimeValue toString(std::vector<RunTimeValue> args);
