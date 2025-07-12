@@ -25,6 +25,17 @@ std::vector<SigmaToken> SigmaLexer::tokenize(std::string code) {
                 tokens.push_back({ known_tokens[str], str });
             else tokens.push_back({ Identifier, str });
         }
+        else if (current_char == '\"'){
+            std::string str;
+            advance();
+            while(current_char != '\"'){
+                str.push_back(current_char);
+                advance();
+            }
+            advance();
+
+            tokens.push_back({ Str, str });
+        }
         else if (isdigit(current_char)){
             std::string str;
 
@@ -62,7 +73,7 @@ std::vector<SigmaToken> SigmaLexer::tokenize(std::string code) {
                 tokens.push_back({ known_tokens[the_str], the_str });
             else throw std::runtime_error("Unknown Sigma Token In Lexer Line " + 
                 std::to_string(__LINE__) + ", Token " + the_str);
-            
+                        
             advance();
         }
     }

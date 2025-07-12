@@ -1,0 +1,8 @@
+var counter = 0
+
+while counter < 20 {
+    println("helloworld   " + toString(counter))
+    counter = counter + 1
+}
+
+println("dsdssda  a")

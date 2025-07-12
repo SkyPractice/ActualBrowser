@@ -2,6 +2,7 @@
 #include "RunTime.h"
 #include "SigmaAst.h"
 #include <algorithm>
+#include <iostream>
 #include <memory>
 #include <stdexcept>
 
@@ -41,7 +42,12 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
             return evaluateFunctionCallExpression(std::dynamic_pointer_cast<FunctionCallExpression>(stmt));
         case IdentifierExpressionType:
             return current_scope->getVal(std::dynamic_pointer_cast<IdentifierExpression>(stmt)->str);
-        
+        case IfStatementType:
+            return evaluateIfStatement(std::dynamic_pointer_cast<IfStatement>(stmt));
+        case WhileStatementType:
+            return evaluateWhileLoopStatement(std::dynamic_pointer_cast<WhileLoopStatement>(stmt));
+        case ForStatementType:
+            return evaluateForLoopStatement(std::dynamic_pointer_cast<ForLoopStatement>(stmt));
         default: throw std::runtime_error("Not Implemented " + std::to_string(stmt->type));
     }
 };
@@ -143,13 +149,12 @@ RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> pro
 };
 
 RunTimeValue SigmaInterpreter::evaluateBinaryExpression(std::shared_ptr<BinaryExpression> expr) {
-    auto left = evaluate(expr);
-    auto right = evaluate(expr);
+    auto left = evaluate(expr->left);
+    auto right = evaluate(expr->right);
 
     if(left->type == NumType && right->type == NumType){
         auto l = std::dynamic_pointer_cast<NumVal>(left);
         auto r = std::dynamic_pointer_cast<NumVal>(right);
-
         return evaluateNumericBinaryExpression(l, r, expr->op);
     }
     if(left->type == StringType && right->type == StringType){
@@ -273,6 +278,8 @@ RunTimeValue SigmaInterpreter::evaluateStringBinaryExpression(std::shared_ptr<St
         return std::make_shared<BoolVal>(left->str >= right->str);
     if(op == "<=")
         return std::make_shared<BoolVal>(left->str <= right->str);
+    if(op == "+")
+        return std::make_shared<StringVal>(left->str + right->str);
 
     throw std::runtime_error("operator " + op + " isn't valid between operands String, String");
 };

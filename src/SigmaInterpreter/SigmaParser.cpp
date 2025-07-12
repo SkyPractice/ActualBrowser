@@ -130,14 +130,11 @@ Expr SigmaParser::parsePrimaryExpr() {
     switch (itr->type) {
         case Number:
             return std::make_shared<NumericExpression>(std::stod(advance().symbol));
-        case DoubleQuote:{
-            advance();
-            std::string str = advance().symbol;
-            advance();
-            return std::make_shared<StringExpression>(str);
+        case Str:{
+            return std::make_shared<StringExpression>(advance().symbol);
         }break;
-        case True: return std::make_shared<BoolExpression>(true);
-        case False: return std::make_shared<BoolExpression>(false);
+        case True: advance(); return std::make_shared<BoolExpression>(true);
+        case False: advance(); return std::make_shared<BoolExpression>(false);
         case OpenParen: {
             auto iterat = itr;
             iterat++;
@@ -159,7 +156,7 @@ Expr SigmaParser::parsePrimaryExpr() {
             return parseArrayExpr();
         case New:
             return parseStructExpr();
-        default: throw std::runtime_error("Expression Type Not Implemented");
+        default: throw std::runtime_error("Expression Type Not Implemented " + std::to_string(itr->type));
     }
 };
 Expr SigmaParser::parseLambdaExpr() {
