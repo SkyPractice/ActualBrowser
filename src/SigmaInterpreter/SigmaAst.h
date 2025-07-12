@@ -71,6 +71,15 @@ public:
     BoolExpression(bool value): Expression(BooleanExpressionType), val(value) {};
 };
 
+class StructExpression : public Expression {
+public:
+    std::string struct_name;
+    std::vector<std::shared_ptr<Expression>> args;
+
+    StructExpression(std::string name, std::vector<std::shared_ptr<Expression>> arguments):
+        Expression(StructExpressionType), struct_name(name), args(arguments) {};
+};
+
 class VariableDecleration : public Expression {
 public:
     std::string var_name;

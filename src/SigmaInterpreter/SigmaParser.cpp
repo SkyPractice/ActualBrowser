@@ -42,7 +42,7 @@ Stmt SigmaParser::parseStmt() {
             return parseStructDeclerationStmt();
         default: { 
             Expr expr = parseExpr();
-            if(expr->type == ArrayExpressionType && itr->type == Equal){
+            if(expr->type == IndexAccessExpressionType && itr->type == Equal){
                 auto expression = std::dynamic_pointer_cast<IndexAccessExpression>(expr);
                 advance(); // eat equal
                 auto express = parseExpr();
@@ -78,7 +78,7 @@ Stmt SigmaParser::parseVarReInitStmt() {
 
 Expr SigmaParser::parseExpr() { 
     auto expr = parseAddExpr();
-    if(expr->type == ArrayExpressionType && itr->type == OpenBracket){
+    if(itr->type == OpenBracket){
         return parseIndexExpr(expr);
     }
 
@@ -157,6 +157,8 @@ Expr SigmaParser::parsePrimaryExpr() {
         }break;
         case OpenBracket:
             return parseArrayExpr();
+        case New:
+            return parseStructExpr();
 
     }
 };
@@ -324,4 +326,21 @@ Stmt SigmaParser::parseStructDeclerationStmt(){
     advance(); // through }
     
     return std::make_shared<StructDeclerationStatement>(struct_iden, propss);
+};
+
+Expr SigmaParser::parseStructExpr(){
+    advance(); // through "new"
+    const std::string stru_name = advance().symbol;
+    const SigmaToken open_paren = advance();
+    std::vector<Expr> exprs;
+
+    while(itr->type != CloseParen){
+        exprs.push_back(parseExpr());
+        if(itr->type == Comma) advance();
+        else break;
+    }
+
+    const SigmaToken close_paren = advance();
+
+    return std::make_shared<StructExpression>(stru_name, exprs);
 };

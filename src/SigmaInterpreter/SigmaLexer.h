@@ -9,7 +9,7 @@ enum SigmaTokenType{
     Quote, DoubleQuote, OpenBracket, CloseBracket, OpenParen, CloseParen,
     OpenBrace, CloseBrace, Enum, Import, ClassWord, Public, Private, Protected,
     Struct, True, False, If, ElseIf, Else, While, For, In, Equal,
-    BinaryOperator, NameSpace, Const, ENDOFFILETOK, Comma, Continue, Break, Return
+    BinaryOperator, NameSpace, Const, ENDOFFILETOK, Comma, Continue, Break, Return, New
 };
 
 struct SigmaToken {
@@ -34,7 +34,7 @@ public:
          {">>", BinaryOperator}, {"<<", BinaryOperator}, {"|", BinaryOperator},
          {"^", BinaryOperator}, {"!=", BinaryOperator}, {"&&", BinaryOperator},
          {"||", BinaryOperator}, {"const", Const}, {",", Comma},
-         {"continue", Continue}, {"break", Break}, {"return", Return}
+         {"continue", Continue}, {"break", Break}, {"return", Return}, {"new", New}
     };
     std::unordered_set<char> skip_chars = {
         ' ', '\t', '\n', '\r'

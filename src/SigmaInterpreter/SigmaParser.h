@@ -29,6 +29,7 @@ public:
     Expr parseFunctionCall();
     Expr parseArrayExpr();
     Expr parseIndexExpr(Expr arr);
+    Expr parseStructExpr();
 
 
     std::vector<SigmaToken>::iterator itr;
