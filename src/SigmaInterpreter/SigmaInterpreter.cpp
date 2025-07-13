@@ -344,19 +344,19 @@ RunTimeValue SigmaInterpreter::evaluateBooleanBinaryExpression(std::shared_ptr<B
 RunTimeValue SigmaInterpreter::evaluateStringBinaryExpression(std::shared_ptr<StringVal> left,
     std::shared_ptr<StringVal> right, std::string op) {
     if(op == "==")
-        return std::make_shared<BoolVal>(left->str == right->str);
+        return RunTimeFactory::makeBool(left->str == right->str);
     if(op == "!=")
-        return std::make_shared<BoolVal>(left->str != right->str);
+        return RunTimeFactory::makeBool(left->str != right->str);
     if(op == ">")
-        return std::make_shared<BoolVal>(left->str > right->str);
+        return RunTimeFactory::makeBool(left->str > right->str);
     if(op == "<")
-        return std::make_shared<BoolVal>(left->str < right->str);
+        return RunTimeFactory::makeBool(left->str < right->str);
     if(op == ">=")
-        return std::make_shared<BoolVal>(left->str >= right->str);
+        return RunTimeFactory::makeBool(left->str >= right->str);
     if(op == "<=")
-        return std::make_shared<BoolVal>(left->str <= right->str);
+        return RunTimeFactory::makeBool(left->str <= right->str);
     if(op == "+")
-        return std::make_shared<StringVal>(left->str + right->str);
+        return RunTimeFactory::makeString(left->str + right->str);
 
     throw std::runtime_error("operator " + op + " isn't valid between operands String, String");
 };

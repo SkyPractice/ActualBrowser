@@ -5,6 +5,7 @@
 #include <vector>
 #include "SigmaAst.h"
 #include <unordered_map>
+#include <memory_resource>
 
 enum RunTimeValType {
     NumType, StringType, CharType, BoolType, LambdaType, ArrayType, StructType, ReturnType,
@@ -121,4 +122,33 @@ public:
 class ContinueVal : public RunTimeVal {
 public:
     ContinueVal(): RunTimeVal(ContinueType) {};
+};
+
+class RunTimeMemory {
+public:
+    static std::pmr::unsynchronized_pool_resource pool;
+};
+
+class RunTimeFactory {
+public:
+    template<typename ValType, typename ...ArgsType>
+    static std::shared_ptr<ValType> makeVal(ArgsType... args) {
+        void* mem = RunTimeMemory::pool.allocate(sizeof(ValType), alignof(ValType));
+        ValType* obj = new(mem)ValType(args...);
+
+        return std::shared_ptr<ValType>(obj, [&](ValType* val) {
+            val->~ValType(); RunTimeMemory::pool.deallocate(val, sizeof(ValType));
+        });
+    };
+    static std::shared_ptr<NumVal> makeNum(double num);
+    static std::shared_ptr<StringVal> makeString(std::string str);
+    static std::shared_ptr<ArrayVal> makeArray(std::vector<std::shared_ptr<RunTimeVal>> vec);
+    static std::shared_ptr<StructVal> makeStruct(std::unordered_map<std::string,
+         std::shared_ptr<RunTimeVal>> vals);
+    static std::shared_ptr<ReturnVal> makeReturn(std::shared_ptr<RunTimeVal> val);
+    static std::shared_ptr<BreakVal> makeBreak();
+    static std::shared_ptr<ContinueVal> makeContinue();
+    static std::shared_ptr<BoolVal> makeBool(bool boolean);
+    static std::shared_ptr<LambdaVal> makeLambda(std::vector<std::string> params,
+        std::vector<std::shared_ptr<Statement>> stmts);
 };
