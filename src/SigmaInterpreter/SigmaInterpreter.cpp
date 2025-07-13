@@ -48,6 +48,13 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
             return evaluateWhileLoopStatement(std::dynamic_pointer_cast<WhileLoopStatement>(stmt));
         case ForStatementType:
             return evaluateForLoopStatement(std::dynamic_pointer_cast<ForLoopStatement>(stmt));
+        case ContinueStatementType:
+            return std::make_shared<ContinueVal>();
+        case BreakStatementType:
+            return std::make_shared<BreakVal>();
+        case ReturnStatementType:
+            return std::make_shared<ReturnVal>(
+                evaluate(std::dynamic_pointer_cast<ReturnStatement>(stmt)->expr));
         default: throw std::runtime_error("Not Implemented " + std::to_string(stmt->type));
     }
 };
@@ -62,6 +69,11 @@ RunTimeValue SigmaInterpreter::evaluateIfStatement(std::shared_ptr<IfStatement> 
 
         for(auto& stmt : if_stmt->stmts){
             auto result = evaluate(stmt);
+            if(!result) continue;
+            if(break_out_types.contains(result->type)){
+                current_scope = current_scope->parent;
+                return result;
+            }
         }
 
         current_scope = current_scope->parent;
@@ -79,6 +91,11 @@ RunTimeValue SigmaInterpreter::evaluateIfStatement(std::shared_ptr<IfStatement> 
 
                 for(auto& stmt : else_if_stmt->stmts){
                     auto result = evaluate(stmt);
+                    if(!result) continue;
+                    if (break_out_types.contains(result->type)) {
+                      current_scope = current_scope->parent;
+                      return result;
+                    }
                 }
 
                 current_scope = current_scope->parent;
@@ -93,6 +110,11 @@ RunTimeValue SigmaInterpreter::evaluateIfStatement(std::shared_ptr<IfStatement> 
 
             for(auto& stmt : if_stmt->else_stmt->stmts){
                 auto result = evaluate(stmt);
+                if(!result) continue;
+                if (break_out_types.contains(result->type)) {
+                  current_scope = current_scope->parent;
+                  return result;
+                }
             }
 
             current_scope = current_scope->parent;
@@ -106,12 +128,24 @@ RunTimeValue SigmaInterpreter::evaluateWhileLoopStatement(std::shared_ptr<WhileL
     while(std::dynamic_pointer_cast<BoolVal>(evaluate(while_loop->expr))->boolean){
         auto scope = std::make_shared<Scope>(current_scope);
         current_scope = scope;
-
+        bool gonna_break = false;
         for(auto& stmt : while_loop->stmts){
             auto result = evaluate(stmt);
+            if(!result) continue;
+            if(result->type == BreakType){
+                gonna_break = true;
+                break;
+            }
+            if(result->type == ContinueType)
+                break;
+            if(result->type == ReturnType){
+                current_scope = current_scope->parent;
+                return result;
+            }
         }
 
         current_scope = current_scope->parent;
+        if(gonna_break) break;
     }
 
     return nullptr;
@@ -121,12 +155,29 @@ RunTimeValue SigmaInterpreter::evaluateForLoopStatement(std::shared_ptr<ForLoopS
     current_scope = scope;
     evaluate(for_loop->first_stmt);
 
+    bool gonna_break = false;
     while(std::dynamic_pointer_cast<BoolVal>(for_loop->expr)->boolean){
         auto sc = std::dynamic_pointer_cast<Scope>(current_scope);
         current_scope = sc;
 
         for(auto& stmt : for_loop->stmts){
             auto result = evaluate(stmt);
+            if(!result) continue;
+            if(result->type == BreakType){
+                gonna_break = true;
+                break;
+            }
+            else if (result->type == ContinueType)
+                break;
+            else if (result->type == ReturnType){
+                current_scope = current_scope->parent;
+                current_scope = current_scope->parent;
+                return result;
+            }
+        }
+        if(gonna_break){
+            current_scope = current_scope->parent;
+            break;
         }
 
         evaluate(for_loop->last_stmt);
@@ -186,16 +237,40 @@ RunTimeValue SigmaInterpreter::evaluateVariableReInitStatement(std::shared_ptr<V
 };
 
 RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<FunctionCallExpression> expr) {
-    if(native_functions.contains(expr->func_name)){
-        std::vector<RunTimeValue> args(expr->args.size());
+    
+    std::vector<RunTimeValue> args(expr->args.size());
 
-        std::transform(expr->args.begin(), expr->args.end(), args.begin(),
-            [this](Expr& expr){ return evaluate(expr); });
-        
+    std::transform(expr->args.begin(), expr->args.end(), args.begin(),
+        [this](Expr& expr){ return evaluate(expr); });
+    
+    if(native_functions.contains(expr->func_name)){    
         return native_functions[expr->func_name](args);
     } else {
-        // not implemented
-        return nullptr;
+        auto func = current_scope->getVal(expr->func_name);
+        if(func->type != LambdaType)
+            throw std::runtime_error(expr->func_name + " is not a callable");
+        auto actual_func = std::dynamic_pointer_cast<LambdaVal>(func);
+
+        auto arg_scope = std::make_shared<Scope>(current_scope);
+        current_scope = arg_scope;
+        for(int i = 0; i < args.size(); i++){
+            current_scope->declareVar(actual_func->params[i], {args[i] , false});
+        }
+        auto func_scope = std::make_shared<Scope>(current_scope);;
+        current_scope = func_scope;
+
+        RunTimeValue return_val;
+
+        for(auto& stmt : actual_func->stmts){
+            auto val = evaluate(stmt);
+            if(val->type == ReturnType){
+                return_val = std::dynamic_pointer_cast<ReturnVal>(val)->val;
+                break;
+            }
+        }
+
+        current_scope = current_scope->parent;
+        current_scope = current_scope->parent;
     }
 };
 

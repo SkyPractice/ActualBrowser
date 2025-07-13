@@ -5,6 +5,7 @@
 #include <memory>
 #include <stdexcept>
 #include <unordered_map>
+#include <unordered_set>
 
 typedef std::shared_ptr<Statement> Stmt;
 typedef std::shared_ptr<Expression> Expr;
@@ -52,7 +53,9 @@ public:
     std::shared_ptr<Scope> current_scope = std::make_shared<Scope>(nullptr);
     std::unordered_map<std::string, std::function<RunTimeValue(std::vector<RunTimeValue>)>> 
         native_functions;
-
+    std::unordered_set<RunTimeValType> break_out_types = {
+        BreakType, ContinueType, ReturnType
+    };
     SigmaInterpreter();
     
     RunTimeValue evaluate(Stmt stmt);

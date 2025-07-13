@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include <string>
 #include <sys/cdefs.h>
 #include <vector>
@@ -6,7 +7,8 @@
 #include <unordered_map>
 
 enum RunTimeValType {
-    NumType, StringType, CharType, BoolType, LambdaType, ArrayType, StructType
+    NumType, StringType, CharType, BoolType, LambdaType, ArrayType, StructType, ReturnType,
+    BreakType, ContinueType
 };
 
 class RunTimeVal {
@@ -15,7 +17,7 @@ public:
     RunTimeVal(RunTimeValType t): type(t) {};
 
     virtual ~RunTimeVal() {};
-    virtual std::string getString() = 0;
+    virtual std::string getString() {};
 };
 
 class NumVal : public RunTimeVal {
@@ -102,4 +104,21 @@ public:
     std::string getString() override {
         return "<struct>";
     }
+};
+
+class ReturnVal : public RunTimeVal {
+public:
+    std::shared_ptr<RunTimeVal> val;
+
+    ReturnVal(std::shared_ptr<RunTimeVal> value): RunTimeVal(ReturnType), val(value) {};
+};
+
+class BreakVal : public RunTimeVal {
+public:
+    BreakVal(): RunTimeVal(BreakType) {};
+};
+
+class ContinueVal : public RunTimeVal {
+public:
+    ContinueVal(): RunTimeVal(ContinueType) {};
 };
