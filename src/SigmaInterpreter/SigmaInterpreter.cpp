@@ -271,6 +271,8 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<Fu
 
         current_scope = current_scope->parent;
         current_scope = current_scope->parent;
+
+        return return_val;
     }
 };
 

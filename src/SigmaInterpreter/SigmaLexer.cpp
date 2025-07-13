@@ -1,5 +1,6 @@
 #include "SigmaLexer.h"
 #include <cctype>
+#include <iostream>
 #include <stdexcept>
 #include <string>
 
@@ -10,7 +11,7 @@ std::vector<SigmaToken> SigmaLexer::tokenize(std::string code) {
 
     std::vector<SigmaToken> tokens;
 
-    while(current_char != '\0' && current_pos < code.size() - 1){
+    while(current_char != '\0' && current_pos < code.size()){
         while(skip_chars.contains(current_char))
             advance();
 
@@ -49,7 +50,11 @@ std::vector<SigmaToken> SigmaLexer::tokenize(std::string code) {
             std::string the_str;
             the_str.push_back(current_char);
 
-            if((the_str == ">" || the_str == "<" || the_str == "!") && code[current_pos + 1] == '='){
+            if(the_str == "=" && code[current_pos + 1] == '>'){
+                the_str.push_back('>');
+                advance();
+            }
+            else if((the_str == ">" || the_str == "<" || the_str == "!") && code[current_pos + 1] == '='){
                 the_str.push_back('=');
                 advance();
             } else if (the_str == ">" && code[current_pos + 1] == '>'){
@@ -82,6 +87,8 @@ std::vector<SigmaToken> SigmaLexer::tokenize(std::string code) {
     actual_code = nullptr;
     current_char = '0';
     current_pos = 0;
-
+    for(auto& token : tokens){
+        std::cout << token.symbol << " a sigma token \n";
+    }
     return tokens;
 };

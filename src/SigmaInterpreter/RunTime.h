@@ -17,7 +17,7 @@ public:
     RunTimeVal(RunTimeValType t): type(t) {};
 
     virtual ~RunTimeVal() {};
-    virtual std::string getString() {};
+    virtual std::string getString() { return ""; };
 };
 
 class NumVal : public RunTimeVal {

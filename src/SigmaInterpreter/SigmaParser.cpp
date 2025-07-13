@@ -1,6 +1,7 @@
 #include "SigmaParser.h"
 #include "SigmaAst.h"
 #include "SigmaLexer.h"
+#include <iostream>
 #include <memory>
 #include <stdexcept>
 
@@ -140,8 +141,10 @@ Expr SigmaParser::parsePrimaryExpr() {
             iterat++;
             while(iterat->type != CloseParen)
                 iterat++;
-            if(std::next(iterat)->symbol == "=>")
+
+            if(std::next(iterat)->symbol == "=>"){
                 return parseLambdaExpr();
+            }
             advance();
             Expr expr = parseExpr();
             advance();
@@ -161,6 +164,7 @@ Expr SigmaParser::parsePrimaryExpr() {
 };
 Expr SigmaParser::parseLambdaExpr() {
     const SigmaToken open_paren = advance();
+    std::cout << open_paren.symbol << " paren";
     std::vector<std::string> strs;
 
     while(itr->type != CloseParen){
@@ -177,7 +181,6 @@ Expr SigmaParser::parseLambdaExpr() {
     while(itr->type != CloseBrace)
         stmts.push_back(parseStmt());
     advance();
-
     return std::make_shared<LambdaExpression>(strs, stmts);
 };
 Expr SigmaParser::parseFunctionCall() {
@@ -185,6 +188,7 @@ Expr SigmaParser::parseFunctionCall() {
     const SigmaToken open_paren = advance();
     std::vector<Expr> exprs;
 
+    std::cout << itr->type << " incorrect itr type" << std::endl;
     while(itr->type != CloseParen){
         exprs.push_back(parseExpr());
         if(itr->type == Comma) advance();

@@ -9,7 +9,8 @@ enum SigmaTokenType{
     Quote, DoubleQuote, OpenBracket, CloseBracket, OpenParen, CloseParen,
     OpenBrace, CloseBrace, Enum, Import, ClassWord, Public, Private, Protected,
     Struct, True, False, If, ElseIf, Else, While, For, In, Equal,
-    BinaryOperator, NameSpace, Const, ENDOFFILETOK, Comma, Continue, Break, Return, New
+    BinaryOperator, NameSpace, Const, ENDOFFILETOK, Comma, Continue, Break, Return, New,
+    LambdaIndicator
 };
 
 struct SigmaToken {
@@ -34,7 +35,8 @@ public:
          {">>", BinaryOperator}, {"<<", BinaryOperator}, {"|", BinaryOperator},
          {"^", BinaryOperator}, {"!=", BinaryOperator}, {"&&", BinaryOperator},
          {"||", BinaryOperator}, {"const", Const}, {",", Comma},
-         {"continue", Continue}, {"break", Break}, {"return", Return}, {"new", New}
+         {"continue", Continue}, {"break", Break}, {"return", Return}, {"new", New},
+         {"=>", LambdaIndicator}
     };
     std::unordered_set<char> skip_chars = {
         ' ', '\t', '\n', '\r'
@@ -46,7 +48,7 @@ public:
     char current_char = '0';
 
     void advance(){
-        if(current_char != '\0' && current_pos < actual_code->size() - 1){
+        if(current_char != '\0' && current_pos < actual_code->size()){
             current_char = (*actual_code)[++current_pos];
         }
     }
