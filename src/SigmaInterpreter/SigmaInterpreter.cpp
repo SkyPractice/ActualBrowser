@@ -14,21 +14,21 @@ SigmaInterpreter::SigmaInterpreter(){
 RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
     switch (stmt->type) {
         case NumericExpressionType:
-            return std::make_shared<NumVal>(std::dynamic_pointer_cast<NumericExpression>(stmt)->num);
+            return RunTimeFactory::makeNum(std::dynamic_pointer_cast<NumericExpression>(stmt)->num);
         case StringExpressionType:
-            return std::make_shared<StringVal>(std::dynamic_pointer_cast<StringExpression>(stmt)->str);
+            return RunTimeFactory::makeString(std::dynamic_pointer_cast<StringExpression>(stmt)->str);
         case BooleanExpressionType:
-            return std::make_shared<BoolVal>(std::dynamic_pointer_cast<BoolExpression>(stmt)->val);
+            return RunTimeFactory::makeBool(std::dynamic_pointer_cast<BoolExpression>(stmt)->val);
         case LambdaExpressionType:{
             auto stm = std::dynamic_pointer_cast<LambdaExpression>(stmt);
-            return std::make_shared<LambdaVal>(stm->params, stm->stmts);
+            return RunTimeFactory::makeLambda(stm->params, stm->stmts);
         }
         case ArrayExpressionType:{
             auto stm = std::dynamic_pointer_cast<ArrayExpression>(stmt);
             std::vector<RunTimeValue> vals(stm->exprs.size());
             std::transform(stm->exprs.begin(), stm->exprs.end(), vals.begin(),
                 [this](Expr expr){ return evaluate(expr); });
-            return std::make_shared<ArrayVal>(vals);
+            return RunTimeFactory::makeArray(vals);
         }
         case BinaryExpressionType:
             return evaluateBinaryExpression(std::dynamic_pointer_cast<BinaryExpression>(stmt));
@@ -49,11 +49,11 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
         case ForStatementType:
             return evaluateForLoopStatement(std::dynamic_pointer_cast<ForLoopStatement>(stmt));
         case ContinueStatementType:
-            return std::make_shared<ContinueVal>();
+            return RunTimeFactory::makeContinue();
         case BreakStatementType:
-            return std::make_shared<BreakVal>();
+            return RunTimeFactory::makeBreak();
         case ReturnStatementType:
-            return std::make_shared<ReturnVal>(
+            return RunTimeFactory::makeReturn(
                 evaluate(std::dynamic_pointer_cast<ReturnStatement>(stmt)->expr));
         default: throw std::runtime_error("Not Implemented " + std::to_string(stmt->type));
     }
@@ -263,6 +263,7 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<Fu
 
         for(auto& stmt : actual_func->stmts){
             auto val = evaluate(stmt);
+            if(!val) continue;
             if(val->type == ReturnType){
                 return_val = std::dynamic_pointer_cast<ReturnVal>(val)->val;
                 break;
@@ -279,64 +280,64 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<Fu
 RunTimeValue SigmaInterpreter::evaluateNumericBinaryExpression(std::shared_ptr<NumVal> left,
     std::shared_ptr<NumVal> right, std::string operat) {
     if(operat == "+")
-        return std::make_shared<NumVal>(left->num + right->num);
+        return RunTimeFactory::makeNum(left->num + right->num);
     if(operat == "-")
-        return std::make_shared<NumVal>(left->num - right->num);
+        return RunTimeFactory::makeNum(left->num - right->num);
     if(operat == "*")
-        return std::make_shared<NumVal>(left->num * right->num);
+        return RunTimeFactory::makeNum(left->num * right->num);
     if(operat == "/")
-        return std::make_shared<NumVal>(left->num / right->num);
+        return RunTimeFactory::makeNum(left->num / right->num);
     if(operat == "%")
-        return std::make_shared<NumVal>((int)left->num % (int)right->num);
+        return RunTimeFactory::makeNum((int)left->num % (int)right->num);
     if(operat == "&")
-        return std::make_shared<NumVal>((int)left->num & (int)right->num);
+        return RunTimeFactory::makeNum((int)left->num & (int)right->num);
     if(operat == "|")
-        return std::make_shared<NumVal>((int)left->num | (int)right->num);
+        return RunTimeFactory::makeNum((int)left->num | (int)right->num);
     if(operat == ">>")
-        return std::make_shared<NumVal>((int)left->num >> (int)right->num);
+        return RunTimeFactory::makeNum((int)left->num >> (int)right->num);
     if(operat == "<<")
-        return std::make_shared<NumVal>((int)left->num << (int)right->num);
+        return RunTimeFactory::makeNum((int)left->num << (int)right->num);
     if(operat == "==")
-        return std::make_shared<BoolVal>(left->num == right->num);
+        return RunTimeFactory::makeBool(left->num == right->num);
     if(operat == ">")
-        return std::make_shared<BoolVal>(left->num > right->num);
+        return RunTimeFactory::makeBool(left->num > right->num);
     if(operat == "<")
-        return std::make_shared<BoolVal>(left->num < right->num);
+        return RunTimeFactory::makeBool(left->num < right->num);
     if(operat == ">=")
-        return std::make_shared<BoolVal>(left->num >= right->num);
+        return RunTimeFactory::makeBool(left->num >= right->num);
     if(operat == "<=")
-        return std::make_shared<BoolVal>(left->num <= right->num);
+        return RunTimeFactory::makeBool(left->num <= right->num);
     if(operat == "!=")
-        return std::make_shared<BoolVal>(left->num != right->num);
+        return RunTimeFactory::makeBool(left->num != right->num);
 
     throw std::runtime_error("operator " + operat + " isn't valid between operands Number, Number");
 };
 RunTimeValue SigmaInterpreter::evaluateBooleanBinaryExpression(std::shared_ptr<BoolVal> left,
     std::shared_ptr<BoolVal> right, std::string op) {
     if(op == "==")
-        return std::make_shared<BoolVal>(left->boolean == right->boolean);
+        return RunTimeFactory::makeBool(left->boolean == right->boolean);
     if(op == "!=")
-        return std::make_shared<BoolVal>(left->boolean != right->boolean);
+        return RunTimeFactory::makeBool(left->boolean != right->boolean);
     if(op == ">")
-        return std::make_shared<BoolVal>(left->boolean > right->boolean);
+        return RunTimeFactory::makeBool(left->boolean > right->boolean);
     if(op == "<")
-        return std::make_shared<BoolVal>(left->boolean < right->boolean);
+        return RunTimeFactory::makeBool(left->boolean < right->boolean);
     if(op == ">=")
-        return std::make_shared<BoolVal>(left->boolean >= right->boolean);
+        return RunTimeFactory::makeBool(left->boolean >= right->boolean);
     if(op == "<=")
-        return std::make_shared<BoolVal>(left->boolean <= right->boolean);
+        return RunTimeFactory::makeBool(left->boolean <= right->boolean);
     if(op == "|")
-        return std::make_shared<NumVal>(left->boolean | right->boolean);
+        return RunTimeFactory::makeNum(left->boolean | right->boolean);
     if(op == "&")
-        return std::make_shared<NumVal>(left->boolean & right->boolean);
+        return RunTimeFactory::makeNum(left->boolean & right->boolean);
     if(op == "&&")
-        return std::make_shared<BoolVal>(left->boolean && right->boolean);
+        return RunTimeFactory::makeBool(left->boolean && right->boolean);
     if(op == "||")
-        return std::make_shared<BoolVal>(left->boolean || right->boolean);
+        return RunTimeFactory::makeBool(left->boolean || right->boolean);
     if(op == ">>")
-        return std::make_shared<NumVal>(left->boolean >> right->boolean);
+        return RunTimeFactory::makeNum(left->boolean >> right->boolean);
     if(op == "<<")
-        return std::make_shared<NumVal>(left->boolean << right->boolean);
+        return RunTimeFactory::makeNum(left->boolean << right->boolean);
 
     throw std::runtime_error("operator " + op + " isn't valid between operands Boolean, Boolean");
 };

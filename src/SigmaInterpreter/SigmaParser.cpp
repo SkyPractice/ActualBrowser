@@ -295,9 +295,11 @@ Stmt SigmaParser::parseForLoop() {
     Stmt last_stmt;
     if(itr->type != Comma){
         first_stmt = parseStmt();
+        advance();
     } else advance();
     if(itr->type != Comma){
         expr = parseExpr();
+        advance();
     } else advance();
     if(itr->type != OpenBrace){
         last_stmt = parseStmt();

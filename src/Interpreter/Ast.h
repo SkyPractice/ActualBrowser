@@ -273,9 +273,7 @@ public:
     void render(Gtk::Box* box) override {
         if(props.contains("src")){
             if(std::filesystem::exists(props["src"])){
-                std::cout << "image exists" << '\n';
                 image = Gtk::manage(new Gtk::Image(props["src"]));
-                std::cout << props["src"] << '\n';
                 image->set_halign(Gtk::Align::START);
                 image->set_hexpand(false);
                 image->add_css_class("img");
