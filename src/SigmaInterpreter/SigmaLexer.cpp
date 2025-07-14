@@ -26,6 +26,13 @@ std::vector<SigmaToken> SigmaLexer::tokenize(std::string code) {
                 tokens.push_back({ known_tokens[str], str });
             else tokens.push_back({ Identifier, str });
         }
+        else if (current_char == '/' && code[current_pos + 1] == '/'){
+            advance();
+            advance();
+            while(current_char != '\n')
+                advance();
+            advance();
+        }
         else if (current_char == '\"'){
             std::string str;
             advance();

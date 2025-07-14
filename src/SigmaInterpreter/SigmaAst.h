@@ -192,11 +192,11 @@ public:
 
 class FunctionCallExpression : public Expression {
 public:
-    std::string func_name;
+    std::shared_ptr<Expression> func_expr;
     std::vector<std::shared_ptr<Expression>> args;
 
-    FunctionCallExpression(std::string name, std::vector<std::shared_ptr<Expression>> arguments):
-        Expression(FunctionCallExpressionType), func_name(name), args(arguments) {};
+    FunctionCallExpression(std::shared_ptr<Expression> expr, std::vector<std::shared_ptr<Expression>> arguments):
+        Expression(FunctionCallExpressionType), func_expr(expr), args(arguments) {};
 };
 
 class IndexAccessExpression : public Expression {

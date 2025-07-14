@@ -27,7 +27,7 @@ public:
     Expr parseBitWiseExpr();
     Expr parsePrimaryExpr();
     Expr parseLambdaExpr();
-    Expr parseFunctionCall();
+    Expr parseFunctionCall(Expr expr);
     Expr parseArrayExpr();
     Expr parseIndexExpr(Expr arr);
     Expr parseStructExpr();

@@ -85,12 +85,15 @@ Stmt SigmaParser::parseVarReInitStmt() {
 
 Expr SigmaParser::parseExpr() { 
     auto expr = parseAddExpr();
-    while (itr->type == OpenBracket || itr->type == Dot){
+    while (itr->type == OpenBracket || itr->type == Dot || itr->type == OpenParen){
         if(itr->type == OpenBracket){
             expr = parseIndexExpr(expr);
         }
         else if(itr->type == Dot){
             expr = parseMemberAccessExpr(expr);
+        }
+        else if (itr->type == OpenParen){
+            expr = parseFunctionCall(expr);
         }
     }
 
@@ -162,8 +165,6 @@ Expr SigmaParser::parsePrimaryExpr() {
             return expr;
         }break;
         case Identifier:{
-            if(std::next(itr)->type == OpenParen)
-                return parseFunctionCall();
             return std::make_shared<IdentifierExpression>(advance().symbol);
         }break;
         case OpenBracket:
@@ -194,8 +195,7 @@ Expr SigmaParser::parseLambdaExpr() {
     advance();
     return std::make_shared<LambdaExpression>(strs, stmts);
 };
-Expr SigmaParser::parseFunctionCall() {
-    const std::string func_name = advance().symbol;
+Expr SigmaParser::parseFunctionCall(Expr expr) {
     const SigmaToken open_paren = advance();
     std::vector<Expr> exprs;
 
@@ -208,7 +208,7 @@ Expr SigmaParser::parseFunctionCall() {
 
     const SigmaToken close_paren = advance();
 
-    return std::make_shared<FunctionCallExpression>(func_name, exprs);
+    return std::make_shared<FunctionCallExpression>(expr, exprs);
 };
 
 Expr SigmaParser::parseArrayExpr() {

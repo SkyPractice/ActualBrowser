@@ -269,38 +269,44 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<Fu
     std::transform(expr->args.begin(), expr->args.end(), args.begin(),
         [this](Expr& expr){ return evaluate(expr); });
     
-    if(native_functions.contains(expr->func_name)){    
-        return native_functions[expr->func_name](args);
-    } else {
-        auto func = current_scope->getVal(expr->func_name);
-        if(func->type != LambdaType)
-            throw std::runtime_error(expr->func_name + " is not a callable");
-        auto actual_func = std::dynamic_pointer_cast<LambdaVal>(func);
-
-        auto arg_scope = std::make_shared<Scope>(current_scope);
-        current_scope = arg_scope;
-        for(int i = 0; i < args.size(); i++){
-            current_scope->declareVar(actual_func->params[i], {args[i] , false});
+    std::cout << "HELLO" << std::endl;
+    if(expr->func_expr->type == IdentifierExpressionType){
+        std::string name = std::dynamic_pointer_cast<IdentifierExpression>(expr->func_expr)->str;
+        std::cout << "Function name: " << name << std::endl;
+        if(native_functions.contains(name)){    
+            return native_functions[name](args);
         }
-        auto func_scope = std::make_shared<Scope>(current_scope);;
-        current_scope = func_scope;
-
-        RunTimeValue return_val;
-
-        for(auto& stmt : actual_func->stmts){
-            auto val = evaluate(stmt);
-            if(!val) continue;
-            if(val->type == ReturnType){
-                return_val = std::dynamic_pointer_cast<ReturnVal>(val)->val;
-                break;
-            }
-        }
-
-        current_scope = current_scope->parent;
-        current_scope = current_scope->parent;
-
-        return return_val;
     }
+    auto func = evaluate(expr->func_expr);
+    if (func->type != LambdaType)
+      throw std::runtime_error("<obj> is not a callable");
+    auto actual_func = std::dynamic_pointer_cast<LambdaVal>(func);
+
+    auto arg_scope = std::make_shared<Scope>(current_scope);
+    current_scope = arg_scope;
+    for (int i = 0; i < args.size(); i++) {
+      current_scope->declareVar(actual_func->params[i], {args[i], false});
+    }
+    auto func_scope = std::make_shared<Scope>(current_scope);
+    ;
+    current_scope = func_scope;
+
+    RunTimeValue return_val;
+
+    for (auto &stmt : actual_func->stmts) {
+      auto val = evaluate(stmt);
+      if (!val)
+        continue;
+      if (val->type == ReturnType) {
+        return_val = std::dynamic_pointer_cast<ReturnVal>(val)->val;
+        break;
+      }
+    }
+
+    current_scope = current_scope->parent;
+    current_scope = current_scope->parent;
+
+    return return_val;
 };
 
 RunTimeValue SigmaInterpreter::
