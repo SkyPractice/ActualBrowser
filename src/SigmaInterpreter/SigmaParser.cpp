@@ -49,6 +49,12 @@ Stmt SigmaParser::parseStmt() {
                 auto express = parseExpr();
                 return std::make_shared<IndexReInitStatement>(expression->array_expr,
                     expression->path, express);
+            } else if (expr->type == MemberAccessExpressionType && itr->type == Equal){
+                auto expression = std::dynamic_pointer_cast<MemberAccessExpression>(expr);
+                advance(); // eat equal
+                auto express = parseExpr();
+                return std::make_shared<MemberReInitExpression>(expression->struct_expr,
+                    expression->path, express);
             }
             return expr;
         }break;
@@ -81,6 +87,8 @@ Expr SigmaParser::parseExpr() {
     auto expr = parseAddExpr();
     if(itr->type == OpenBracket){
         return parseIndexExpr(expr);
+    } else if(itr->type == Dot){
+        return parseMemberAccessExpr(expr);
     }
 
     return expr;
@@ -346,4 +354,15 @@ Expr SigmaParser::parseStructExpr(){
     const SigmaToken close_paren = advance();
 
     return std::make_shared<StructExpression>(stru_name, exprs);
+};
+
+Expr SigmaParser::parseMemberAccessExpr(Expr struc) {
+    std::vector<std::string> path;
+
+    while(itr->type == Dot){
+        advance();
+        path.push_back(advance().symbol);
+    }
+
+    return std::make_shared<MemberAccessExpression>(struc, path);
 };

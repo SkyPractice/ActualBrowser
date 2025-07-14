@@ -5,6 +5,8 @@
 #include <iostream>
 #include <memory>
 #include <stdexcept>
+#include <string>
+#include <unordered_map>
 
 SigmaInterpreter::SigmaInterpreter(){
     native_functions.insert({"println", &SigmaInterpreter::println});
@@ -29,6 +31,19 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
             std::transform(stm->exprs.begin(), stm->exprs.end(), vals.begin(),
                 [this](Expr expr){ return evaluate(expr); });
             return RunTimeFactory::makeArray(vals);
+        }
+        case StructExpressionType:{
+            auto stm = std::dynamic_pointer_cast<StructExpression>(stmt);
+            if(!struct_decls.contains(stm->struct_name))
+                throw std::runtime_error("no struct with name " + stm->struct_name);
+            std::vector<std::string> vecc = struct_decls[stm->struct_name];
+            std::unordered_map<std::string, RunTimeValue> vals;
+
+            for(int i = 0; i < vecc.size(); i++){
+                vals.insert({ vecc[i], evaluate(stm->args[i]) });
+            }
+
+            return RunTimeFactory::makeStruct(vals);
         }
         case BinaryExpressionType:
             return evaluateBinaryExpression(std::dynamic_pointer_cast<BinaryExpression>(stmt));
@@ -59,6 +74,12 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
             return evaluateIndexAccessExpression(std::dynamic_pointer_cast<IndexAccessExpression>(stmt));
         case IndexReInitStatementType:
             return evaluateIndexReInitStatement(std::dynamic_pointer_cast<IndexReInitStatement>(stmt));
+        case StructDeclerationType:
+            return evaluateStructDeclStatement(std::dynamic_pointer_cast<StructDeclerationStatement>(stmt));
+        case MemberAccessExpressionType:
+            return evaluateMemberAccessExpression(std::dynamic_pointer_cast<MemberAccessExpression>(stmt));
+        case MemberReInitExpressionType:
+            return evaluateMemberReInitStatement(std::dynamic_pointer_cast<MemberReInitExpression>(stmt));
         default: throw std::runtime_error("Not Implemented " + std::to_string(stmt->type));
     }
 };
@@ -195,6 +216,7 @@ RunTimeValue SigmaInterpreter::evaluateForLoopStatement(std::shared_ptr<ForLoopS
 
 RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> program) {
     current_scope = std::make_shared<Scope>(nullptr);
+    struct_decls.clear();
 
     for(auto& stmt : program->stmts){
         evaluate(stmt);
@@ -305,6 +327,25 @@ RunTimeValue SigmaInterpreter::
     return val;
 };
 
+RunTimeValue SigmaInterpreter::
+    evaluateMemberAccessExpression(std::shared_ptr<MemberAccessExpression> expr) {
+    auto val = evaluate(expr->struct_expr);
+    
+    for(auto& str : expr->path){
+        if(val->type != StructType) throw std::runtime_error("operator . must be used on an object the current type is: " + 
+            std::to_string(val->type));
+        auto real_val = std::dynamic_pointer_cast<StructVal>(val);
+
+        if(!real_val->vals.contains(str)) throw std::runtime_error("member " + str + " not found in an object");
+        
+        val = real_val->vals[str];
+
+    }
+
+
+    return val;
+};
+
 RunTimeValue SigmaInterpreter::evaluateIndexReInitStatement(std::shared_ptr<IndexReInitStatement> stmt) {
     auto val = evaluate(stmt->array_expr);
     auto latest_num = 
@@ -405,4 +446,28 @@ RunTimeValue SigmaInterpreter::evaluateStringBinaryExpression(std::shared_ptr<St
         return RunTimeFactory::makeString(left->str + right->str);
 
     throw std::runtime_error("operator " + op + " isn't valid between operands String, String");
+};
+
+RunTimeValue SigmaInterpreter::
+    evaluateStructDeclStatement(std::shared_ptr<StructDeclerationStatement> stmt) {
+    struct_decls.insert({stmt->struct_name, stmt->props});
+
+    return nullptr;
+};
+
+RunTimeValue SigmaInterpreter::evaluateMemberReInitStatement(
+    std::shared_ptr<MemberReInitExpression> expr) {
+    auto val = evaluate(expr->struct_expr);
+    auto latest_str = expr->path.back();
+    expr->path.pop_back();
+
+    for(auto& str : expr->path){
+        val = std::dynamic_pointer_cast<StructVal>(val)->vals[
+            str
+        ];
+    }
+
+    auto latest_val = std::dynamic_pointer_cast<StructVal>(val);
+    latest_val->vals[latest_str] = evaluate(expr->val);
+    return nullptr;
 };

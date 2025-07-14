@@ -18,6 +18,7 @@ public:
     Stmt parseForLoop();
     Stmt parseStructDeclerationStmt();
     Stmt parseIndexReInitStmt(Expr arr);
+    Stmt parseMemberReInitStmt(Expr stru);
 
     Expr parseExpr();
     Expr parseAddExpr();
@@ -30,7 +31,7 @@ public:
     Expr parseArrayExpr();
     Expr parseIndexExpr(Expr arr);
     Expr parseStructExpr();
-
+    Expr parseMemberAccessExpr(Expr struc);
 
     std::vector<SigmaToken>::iterator itr;
 

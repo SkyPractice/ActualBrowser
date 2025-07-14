@@ -56,6 +56,8 @@ public:
     std::unordered_set<RunTimeValType> break_out_types = {
         BreakType, ContinueType, ReturnType
     };
+    std::unordered_map<std::string, std::vector<std::string>> struct_decls;
+
     SigmaInterpreter();
     
     RunTimeValue evaluate(Stmt stmt);
@@ -69,6 +71,7 @@ public:
         std::shared_ptr<StringVal> right, std::string op);
     RunTimeValue evaluateFunctionCallExpression(std::shared_ptr<FunctionCallExpression> expr);
     RunTimeValue evaluateIndexAccessExpression(std::shared_ptr<IndexAccessExpression> expr);
+    RunTimeValue evaluateMemberAccessExpression(std::shared_ptr<MemberAccessExpression> expr);
 
     // Shadowing Is Allowed
     RunTimeValue evaluateVariableDeclStatement(std::shared_ptr<VariableDecleration> decl);
@@ -77,6 +80,8 @@ public:
     RunTimeValue evaluateWhileLoopStatement(std::shared_ptr<WhileLoopStatement> while_loop);
     RunTimeValue evaluateForLoopStatement(std::shared_ptr<ForLoopStatement> for_loop);
     RunTimeValue evaluateIndexReInitStatement(std::shared_ptr<IndexReInitStatement> stmt);
+    RunTimeValue evaluateStructDeclStatement(std::shared_ptr<StructDeclerationStatement> stmt);
+    RunTimeValue evaluateMemberReInitStatement(std::shared_ptr<MemberReInitExpression> expr);
 
     static RunTimeValue println(std::vector<RunTimeValue> args);
     static RunTimeValue toString(std::vector<RunTimeValue> args);

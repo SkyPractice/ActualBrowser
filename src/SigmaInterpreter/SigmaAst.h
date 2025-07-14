@@ -11,7 +11,8 @@ enum SigmaAstType {
     WhileStatementType, ForStatementType, ArrayExpressionType, IndexAccessExpressionType,
     IndexReInitStatementType,
     MemberAccessExpressionType, PropertyDeclerationType, NameSpaceType, IdentifierExpressionType,
-    FunctionCallExpressionType, ContinueStatementType, ReturnStatementType, BreakStatementType
+    FunctionCallExpressionType, ContinueStatementType, ReturnStatementType, BreakStatementType,
+    MemberReInitExpressionType
 };
 
 class Statement {
@@ -244,4 +245,25 @@ public:
 
     StructDeclerationStatement(std::string struc_name, std::vector<std::string> properties):
         Statement(StructDeclerationType), struct_name(struc_name), props(properties) {};
+};
+
+class MemberAccessExpression : public Expression {
+public:
+    std::shared_ptr<Expression> struct_expr;
+    std::vector<std::string> path;
+
+    MemberAccessExpression(std::shared_ptr<Expression> expr,
+        std::vector<std::string> p): Expression(MemberAccessExpressionType), struct_expr(expr),
+        path(p) {};
+};
+
+class MemberReInitExpression : public Expression {
+public:
+    std::shared_ptr<Expression> struct_expr;
+    std::vector<std::string> path;
+    std::shared_ptr<Expression> val;
+
+    MemberReInitExpression(std::shared_ptr<Expression> expr, std::vector<std::string> vec, 
+        std::shared_ptr<Expression> v): Expression(MemberReInitExpressionType),
+        struct_expr(expr), path(vec), val(v) {};
 };
