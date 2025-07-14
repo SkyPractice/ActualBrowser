@@ -85,10 +85,13 @@ Stmt SigmaParser::parseVarReInitStmt() {
 
 Expr SigmaParser::parseExpr() { 
     auto expr = parseAddExpr();
-    if(itr->type == OpenBracket){
-        return parseIndexExpr(expr);
-    } else if(itr->type == Dot){
-        return parseMemberAccessExpr(expr);
+    while (itr->type == OpenBracket || itr->type == Dot){
+        if(itr->type == OpenBracket){
+            expr = parseIndexExpr(expr);
+        }
+        else if(itr->type == Dot){
+            expr = parseMemberAccessExpr(expr);
+        }
     }
 
     return expr;
