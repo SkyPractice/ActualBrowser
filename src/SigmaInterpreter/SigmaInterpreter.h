@@ -68,6 +68,7 @@ public:
     RunTimeValue evaluateStringBinaryExpression(std::shared_ptr<StringVal> left,
         std::shared_ptr<StringVal> right, std::string op);
     RunTimeValue evaluateFunctionCallExpression(std::shared_ptr<FunctionCallExpression> expr);
+    RunTimeValue evaluateIndexAccessExpression(std::shared_ptr<IndexAccessExpression> expr);
 
     // Shadowing Is Allowed
     RunTimeValue evaluateVariableDeclStatement(std::shared_ptr<VariableDecleration> decl);
@@ -75,7 +76,8 @@ public:
     RunTimeValue evaluateIfStatement(std::shared_ptr<IfStatement> if_stmt);
     RunTimeValue evaluateWhileLoopStatement(std::shared_ptr<WhileLoopStatement> while_loop);
     RunTimeValue evaluateForLoopStatement(std::shared_ptr<ForLoopStatement> for_loop);
-    
+    RunTimeValue evaluateIndexReInitStatement(std::shared_ptr<IndexReInitStatement> stmt);
+
     static RunTimeValue println(std::vector<RunTimeValue> args);
     static RunTimeValue toString(std::vector<RunTimeValue> args);
     static RunTimeValue numIota(std::vector<RunTimeValue> args);

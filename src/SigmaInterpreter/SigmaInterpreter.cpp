@@ -55,6 +55,10 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
         case ReturnStatementType:
             return RunTimeFactory::makeReturn(
                 evaluate(std::dynamic_pointer_cast<ReturnStatement>(stmt)->expr));
+        case IndexAccessExpressionType:
+            return evaluateIndexAccessExpression(std::dynamic_pointer_cast<IndexAccessExpression>(stmt));
+        case IndexReInitStatementType:
+            return evaluateIndexReInitStatement(std::dynamic_pointer_cast<IndexReInitStatement>(stmt));
         default: throw std::runtime_error("Not Implemented " + std::to_string(stmt->type));
     }
 };
@@ -275,6 +279,47 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<Fu
 
         return return_val;
     }
+};
+
+RunTimeValue SigmaInterpreter::
+    evaluateIndexAccessExpression(std::shared_ptr<IndexAccessExpression> expr) {
+    auto val = evaluate(expr->array_expr);
+    
+    for(auto& num : expr->path){
+        if(val->type != ArrayType) throw std::runtime_error("operator [] must be used on an array");
+        auto real_val = std::dynamic_pointer_cast<ArrayVal>(val);
+
+        auto numb = evaluate(num);
+
+        if(numb->type != NumType) throw std::runtime_error("operator [] excepts a number");
+
+        auto real_num = std::dynamic_pointer_cast<NumVal>(numb);
+
+        if(real_num->num >= real_val->vals.size()) throw std::runtime_error("out of bounds array index");
+
+        val = real_val->vals[static_cast<int>(real_num->num)];
+
+    }
+
+
+    return val;
+};
+
+RunTimeValue SigmaInterpreter::evaluateIndexReInitStatement(std::shared_ptr<IndexReInitStatement> stmt) {
+    auto val = evaluate(stmt->array_expr);
+    auto latest_num = 
+        std::dynamic_pointer_cast<NumVal>(evaluate(stmt->path.back()));
+    stmt->path.pop_back();
+
+    for(auto& num : stmt->path){
+        val = std::dynamic_pointer_cast<ArrayVal>(val)->vals[
+            static_cast<int>(std::dynamic_pointer_cast<NumVal>(num)->num)
+        ];
+    }
+
+    auto latest_val = std::dynamic_pointer_cast<ArrayVal>(val);
+    latest_val->vals[static_cast<int>(latest_num->num)] = evaluate(stmt->val);
+    return nullptr;
 };
 
 RunTimeValue SigmaInterpreter::evaluateNumericBinaryExpression(std::shared_ptr<NumVal> left,
