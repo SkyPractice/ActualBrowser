@@ -56,7 +56,7 @@ public:
     std::unordered_set<RunTimeValType> break_out_types = {
         BreakType, ContinueType, ReturnType
     };
-    std::unordered_map<std::string, std::vector<std::string>> struct_decls;
+    std::unordered_map<std::string, std::vector<std::shared_ptr<VariableDecleration>>> struct_decls;
 
     SigmaInterpreter();
     
@@ -83,7 +83,10 @@ public:
     RunTimeValue evaluateStructDeclStatement(std::shared_ptr<StructDeclerationStatement> stmt);
     RunTimeValue evaluateMemberReInitStatement(std::shared_ptr<MemberReInitExpression> expr);
 
+    static RunTimeValue print(std::vector<RunTimeValue> args);
     static RunTimeValue println(std::vector<RunTimeValue> args);
     static RunTimeValue toString(std::vector<RunTimeValue> args);
     static RunTimeValue numIota(std::vector<RunTimeValue> args);
+    static RunTimeValue readFileSync(std::vector<RunTimeValue> args);
+    static RunTimeValue writeFileSync(std::vector<RunTimeValue> args);
 };

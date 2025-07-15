@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #include <memory>
 #include <string>
 #include <sys/cdefs.h>
@@ -9,7 +10,7 @@
 
 enum RunTimeValType {
     NumType, StringType, CharType, BoolType, LambdaType, ArrayType, StructType, ReturnType,
-    BreakType, ContinueType
+    BreakType, ContinueType, NativeFunctionType
 };
 
 class RunTimeVal {
@@ -124,6 +125,14 @@ public:
     ContinueVal(): RunTimeVal(ContinueType) {};
 };
 
+class NativeFunctionVal : public RunTimeVal {
+public:
+    using FuncType = std::function<std::shared_ptr<RunTimeVal>(std::vector<std::shared_ptr<RunTimeVal>>)>;    
+    FuncType func;
+
+    NativeFunctionVal(FuncType functio): RunTimeVal(NativeFunctionType), func(functio) {};
+};
+
 class RunTimeMemory {
 public:
     static std::pmr::unsynchronized_pool_resource pool;
@@ -151,4 +160,7 @@ public:
     static std::shared_ptr<BoolVal> makeBool(bool boolean);
     static std::shared_ptr<LambdaVal> makeLambda(std::vector<std::string> params,
         std::vector<std::shared_ptr<Statement>> stmts);
+    static std::shared_ptr<NativeFunctionVal> makeNativeFunction(
+        NativeFunctionVal::FuncType func
+    );
 };

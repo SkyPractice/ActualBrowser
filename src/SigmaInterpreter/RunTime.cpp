@@ -34,3 +34,9 @@ std::shared_ptr<LambdaVal> RunTimeFactory::makeLambda(std::vector<std::string> p
     std::vector<std::shared_ptr<Statement>> stmts) {
     return makeVal<LambdaVal>(params, stmts);
 };
+
+std::shared_ptr<NativeFunctionVal> RunTimeFactory::makeNativeFunction(
+        NativeFunctionVal::FuncType func
+){
+    return makeVal<NativeFunctionVal>(func);
+};

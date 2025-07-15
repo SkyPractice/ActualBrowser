@@ -330,9 +330,9 @@ Stmt SigmaParser::parseStructDeclerationStmt(){
     advance(); // through "struct"
     std::string struct_iden = advance().symbol;
     advance(); // through {
-    std::vector<std::string> propss;
+    std::vector<std::shared_ptr<VariableDecleration>> propss;
     while(itr->type != CloseBrace){
-        propss.push_back(advance().symbol);
+        propss.push_back(std::dynamic_pointer_cast<VariableDecleration>(parseStmt()));
         if(itr->type == Comma)
             advance();
         else break;

@@ -241,9 +241,9 @@ public:
 class StructDeclerationStatement : public Statement {
 public:
     std::string struct_name;
-    std::vector<std::string> props;
+    std::vector<std::shared_ptr<VariableDecleration>> props;
 
-    StructDeclerationStatement(std::string struc_name, std::vector<std::string> properties):
+    StructDeclerationStatement(std::string struc_name, std::vector<std::shared_ptr<VariableDecleration>> properties):
         Statement(StructDeclerationType), struct_name(struc_name), props(properties) {};
 };
 

@@ -9,8 +9,7 @@
 #include <unordered_map>
 
 SigmaInterpreter::SigmaInterpreter(){
-    native_functions.insert({"println", &SigmaInterpreter::println});
-    native_functions.insert({ "toString", &SigmaInterpreter::toString });
+
 };
 
 RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
@@ -36,11 +35,15 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
             auto stm = std::dynamic_pointer_cast<StructExpression>(stmt);
             if(!struct_decls.contains(stm->struct_name))
                 throw std::runtime_error("no struct with name " + stm->struct_name);
-            std::vector<std::string> vecc = struct_decls[stm->struct_name];
+            std::vector<std::shared_ptr<VariableDecleration>> vecc = struct_decls[stm->struct_name];
             std::unordered_map<std::string, RunTimeValue> vals;
 
-            for(int i = 0; i < vecc.size(); i++){
-                vals.insert({ vecc[i], evaluate(stm->args[i]) });
+            for(int i = 0; i < stm->args.size(); i++){
+                vals.insert({ vecc[i]->var_name, evaluate(stm->args[i]) });
+            }
+
+            for(int k = stm->args.size(); k < vecc.size(); k++){
+                vals.insert({ vecc[k]->var_name, evaluate(vecc[k]->expr)  });
             }
 
             return RunTimeFactory::makeStruct(vals);
@@ -217,7 +220,18 @@ RunTimeValue SigmaInterpreter::evaluateForLoopStatement(std::shared_ptr<ForLoopS
 RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> program) {
     current_scope = std::make_shared<Scope>(nullptr);
     struct_decls.clear();
-
+    
+    std::unordered_map<std::string, RunTimeValue> console_vals;
+    console_vals.insert({"println", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::println)});
+    console_vals.insert({"print", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::print)});
+    console_vals.insert({"toString", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::toString)});
+    
+    std::unordered_map<std::string, RunTimeValue> io_vals;
+    io_vals.insert({"readFileSync", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::readFileSync)});
+    io_vals.insert({"writeFileSync", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::writeFileSync)});
+    
+    current_scope->declareVar("Files", { RunTimeFactory::makeStruct(io_vals) ,true });
+    current_scope->declareVar("Console", { RunTimeFactory::makeStruct(console_vals) ,true });
     for(auto& stmt : program->stmts){
         evaluate(stmt);
     }
@@ -269,15 +283,18 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<Fu
     std::transform(expr->args.begin(), expr->args.end(), args.begin(),
         [this](Expr& expr){ return evaluate(expr); });
     
-    std::cout << "HELLO" << std::endl;
-    if(expr->func_expr->type == IdentifierExpressionType){
-        std::string name = std::dynamic_pointer_cast<IdentifierExpression>(expr->func_expr)->str;
-        std::cout << "Function name: " << name << std::endl;
-        if(native_functions.contains(name)){    
-            return native_functions[name](args);
-        }
-    }
+    // if(expr->func_expr->type == IdentifierExpressionType){
+    //     std::string name = std::dynamic_pointer_cast<IdentifierExpression>(expr->func_expr)->str;
+    //     std::cout << "Function name: " << name << std::endl;
+    //     if(native_functions.contains(name)){    
+    //         return native_functions[name](args);
+    //     }
+    // }
     auto func = evaluate(expr->func_expr);
+    if(func->type == NativeFunctionType){
+        auto ac_func = std::dynamic_pointer_cast<NativeFunctionVal>(func);
+        return ac_func->func(args);
+    }
     if (func->type != LambdaType)
       throw std::runtime_error("<obj> is not a callable");
     auto actual_func = std::dynamic_pointer_cast<LambdaVal>(func);
@@ -314,19 +331,24 @@ RunTimeValue SigmaInterpreter::
     auto val = evaluate(expr->array_expr);
     
     for(auto& num : expr->path){
-        if(val->type != ArrayType) throw std::runtime_error("operator [] must be used on an array");
-        auto real_val = std::dynamic_pointer_cast<ArrayVal>(val);
-
+        
         auto numb = evaluate(num);
 
         if(numb->type != NumType) throw std::runtime_error("operator [] excepts a number");
 
         auto real_num = std::dynamic_pointer_cast<NumVal>(numb);
+        if(val->type == StringType){
+            auto real_val = std::dynamic_pointer_cast<StringVal>(val);    
+            if(real_num->num >= real_val->str.size()) throw std::runtime_error("out of bounds array index");
+            val = RunTimeFactory::makeString(std::string(1, real_val->str[static_cast<int>(real_num->num)]));
+            return val;
+        }
+
+        if(val->type != ArrayType) throw std::runtime_error("operator [] must be used on an array");
+        auto real_val = std::dynamic_pointer_cast<ArrayVal>(val);
 
         if(real_num->num >= real_val->vals.size()) throw std::runtime_error("out of bounds array index");
-
         val = real_val->vals[static_cast<int>(real_num->num)];
-
     }
 
 
@@ -364,6 +386,12 @@ RunTimeValue SigmaInterpreter::evaluateIndexReInitStatement(std::shared_ptr<Inde
         ];
     }
 
+    if(val->type == StringType){
+        auto latest_val = std::dynamic_pointer_cast<StringVal>(val);
+        latest_val->str[static_cast<int>(latest_num->num)] = 
+            std::dynamic_pointer_cast<StringVal>(evaluate(stmt->val))->str[0]; 
+        return nullptr;
+    }
     auto latest_val = std::dynamic_pointer_cast<ArrayVal>(val);
     latest_val->vals[static_cast<int>(latest_num->num)] = evaluate(stmt->val);
     return nullptr;
