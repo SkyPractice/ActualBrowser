@@ -26,8 +26,8 @@ public:
 class SigmaProgram : public Statement {
 public:
     std::vector<std::shared_ptr<Statement>> stmts;
-    SigmaProgram (std::vector<std::shared_ptr<Statement>>& statements): Statement(ProgramType),
-        stmts(statements) {};
+    SigmaProgram (std::vector<std::shared_ptr<Statement>> statements): Statement(ProgramType),
+        stmts(std::move(statements)) {};
 };
 
 class Expression : public Statement {

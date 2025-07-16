@@ -94,8 +94,5 @@ std::vector<SigmaToken> SigmaLexer::tokenize(std::string code) {
     actual_code = nullptr;
     current_char = '0';
     current_pos = 0;
-    for(auto& token : tokens){
-        std::cout << token.symbol << " a sigma token \n";
-    }
     return tokens;
 };

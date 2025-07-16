@@ -17,19 +17,20 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
         case NumericExpressionType:
             return RunTimeFactory::makeNum(std::dynamic_pointer_cast<NumericExpression>(stmt)->num);
         case StringExpressionType:
-            return RunTimeFactory::makeString(std::dynamic_pointer_cast<StringExpression>(stmt)->str);
+            return RunTimeFactory::makeString(
+                (std::dynamic_pointer_cast<StringExpression>(stmt)->str));
         case BooleanExpressionType:
             return RunTimeFactory::makeBool(std::dynamic_pointer_cast<BoolExpression>(stmt)->val);
         case LambdaExpressionType:{
             auto stm = std::dynamic_pointer_cast<LambdaExpression>(stmt);
-            return RunTimeFactory::makeLambda(stm->params, stm->stmts);
+            return RunTimeFactory::makeLambda((stm->params), (stm->stmts));
         }
         case ArrayExpressionType:{
             auto stm = std::dynamic_pointer_cast<ArrayExpression>(stmt);
             std::vector<RunTimeValue> vals(stm->exprs.size());
             std::transform(stm->exprs.begin(), stm->exprs.end(), vals.begin(),
                 [this](Expr expr){ return evaluate(expr); });
-            return RunTimeFactory::makeArray(vals);
+            return RunTimeFactory::makeArray((vals));
         }
         case StructExpressionType:{
             auto stm = std::dynamic_pointer_cast<StructExpression>(stmt);
@@ -46,7 +47,7 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
                 vals.insert({ vecc[k]->var_name, evaluate(vecc[k]->expr)  });
             }
 
-            return RunTimeFactory::makeStruct(vals);
+            return RunTimeFactory::makeStruct((vals));
         }
         case BinaryExpressionType:
             return evaluateBinaryExpression(std::dynamic_pointer_cast<BinaryExpression>(stmt));
@@ -184,8 +185,8 @@ RunTimeValue SigmaInterpreter::evaluateForLoopStatement(std::shared_ptr<ForLoopS
     evaluate(for_loop->first_stmt);
 
     bool gonna_break = false;
-    while(std::dynamic_pointer_cast<BoolVal>(for_loop->expr)->boolean){
-        auto sc = std::dynamic_pointer_cast<Scope>(current_scope);
+    while(std::dynamic_pointer_cast<BoolVal>(evaluate(for_loop->expr))->boolean){
+        auto sc = std::make_shared<Scope>(current_scope);
         current_scope = sc;
 
         for(auto& stmt : for_loop->stmts){
@@ -230,8 +231,12 @@ RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> pro
     io_vals.insert({"readFileSync", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::readFileSync)});
     io_vals.insert({"writeFileSync", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::writeFileSync)});
     
-    current_scope->declareVar("Files", { RunTimeFactory::makeStruct(io_vals) ,true });
-    current_scope->declareVar("Console", { RunTimeFactory::makeStruct(console_vals) ,true });
+    std::unordered_map<std::string, RunTimeValue> str_vals;
+    str_vals.insert({"valueOf", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::toString)});
+
+    current_scope->declareVar("Files", { RunTimeFactory::makeStruct((io_vals)) ,true });
+    current_scope->declareVar("Console", { RunTimeFactory::makeStruct((console_vals)) ,true });
+    current_scope->declareVar("String", { RunTimeFactory::makeStruct((str_vals)), true });
     for(auto& stmt : program->stmts){
         evaluate(stmt);
     }

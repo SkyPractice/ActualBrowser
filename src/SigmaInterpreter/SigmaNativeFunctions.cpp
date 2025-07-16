@@ -43,13 +43,7 @@ RunTimeValue SigmaInterpreter::print(std::vector<RunTimeValue> args){
 };
 RunTimeValue SigmaInterpreter::toString(std::vector<RunTimeValue> args) {
     if(args.size() > 0){
-        switch (args[0]->type) {
-            case NumType:
-                return RunTimeFactory::makeString(
-                    std::to_string(std::dynamic_pointer_cast<NumVal>(args[0])->num));
-            default: throw std::runtime_error("Type Not Convertable To String");
-        }
-        return nullptr;
+        return RunTimeFactory::makeString(args[0]->getString());
     } else return RunTimeFactory::makeString("");
 };
 
@@ -71,7 +65,7 @@ RunTimeValue SigmaInterpreter::readFileSync(std::vector<RunTimeValue> args) {
     strea.seekg(0, std::ios::beg);
     strea.read(&strr[0], s);
     strea.close();
-    return RunTimeFactory::makeString(strr);
+    return RunTimeFactory::makeString(std::move(strr));
 };
 RunTimeValue SigmaInterpreter::writeFileSync(std::vector<RunTimeValue> args) {
     if(args[0]->type != StringType || args[0]->type != StringType) throw

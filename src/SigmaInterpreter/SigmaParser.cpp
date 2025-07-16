@@ -156,7 +156,7 @@ Expr SigmaParser::parsePrimaryExpr() {
             while(iterat->type != CloseParen)
                 iterat++;
 
-            if(std::next(iterat)->symbol == "=>"){
+            if(std::next(iterat)->type == LambdaIndicator){
                 return parseLambdaExpr();
             }
             advance();

@@ -36,10 +36,10 @@ public:
 class StringVal : public RunTimeVal {
 public:
     std::string str;
-    StringVal(std::string stri): RunTimeVal(StringType), str(stri) {};
+    StringVal(std::string stri): RunTimeVal(StringType), str(std::move(stri)) {};
 
     std::string getString() override {
-        return str;
+        return "\"" + str + "\"";
     };
 };
 
@@ -73,7 +73,7 @@ public:
 
     LambdaVal(std::vector<std::string> parameters,
         std::vector<std::shared_ptr<Statement>> statements):
-        RunTimeVal(LambdaType), params(parameters), stmts(statements) {}; 
+        RunTimeVal(LambdaType), params(std::move(parameters)), stmts(std::move(statements)) {}; 
 
     std::string getString() override {
         return "<Lambda>";
@@ -85,14 +85,15 @@ public:
     std::vector<std::shared_ptr<RunTimeVal>> vals;
 
     ArrayVal(std::vector<std::shared_ptr<RunTimeVal>> values):
-        RunTimeVal(ArrayType), vals(values) {};
+        RunTimeVal(ArrayType), vals(std::move(values)) {};
     std::string getString() override {
         std::string str = "[ ";
         for(auto val : vals){
             std::string strr = val->getString();
             str += strr;
-            str += " ";
+            str += ", ";
         }
+        str += "]";
         return str;
     }
 };
@@ -102,7 +103,7 @@ public:
     std::unordered_map<std::string, std::shared_ptr<RunTimeVal>> vals;
 
     StructVal(std::unordered_map<std::string, std::shared_ptr<RunTimeVal>> values):
-        RunTimeVal(StructType), vals(values) {};
+        RunTimeVal(StructType), vals(std::move(values)) {};
     std::string getString() override {
         return "<struct>";
     }
@@ -112,7 +113,7 @@ class ReturnVal : public RunTimeVal {
 public:
     std::shared_ptr<RunTimeVal> val;
 
-    ReturnVal(std::shared_ptr<RunTimeVal> value): RunTimeVal(ReturnType), val(value) {};
+    ReturnVal(std::shared_ptr<RunTimeVal> value): RunTimeVal(ReturnType), val(std::move(value)) {};
 };
 
 class BreakVal : public RunTimeVal {
@@ -130,7 +131,7 @@ public:
     using FuncType = std::function<std::shared_ptr<RunTimeVal>(std::vector<std::shared_ptr<RunTimeVal>>)>;    
     FuncType func;
 
-    NativeFunctionVal(FuncType functio): RunTimeVal(NativeFunctionType), func(functio) {};
+    NativeFunctionVal(FuncType functio): RunTimeVal(NativeFunctionType), func(std::move(functio)) {};
 };
 
 class RunTimeMemory {
@@ -143,7 +144,7 @@ public:
     template<typename ValType, typename ...ArgsType>
     static std::shared_ptr<ValType> makeVal(ArgsType... args) {
         void* mem = RunTimeMemory::pool.allocate(sizeof(ValType), alignof(ValType));
-        ValType* obj = new(mem)ValType(args...);
+        ValType* obj = new(mem)ValType(std::forward<ArgsType>(args)...);
 
         return std::shared_ptr<ValType>(obj, [&](ValType* val) {
             val->~ValType(); RunTimeMemory::pool.deallocate(val, sizeof(ValType));
