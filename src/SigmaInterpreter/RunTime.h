@@ -83,7 +83,7 @@ public:
 
     LambdaVal(std::vector<std::string> parameters,
         std::vector<std::shared_ptr<Statement>> statements,
-        std::unordered_map<std::string, std::shared_ptr<RunTimeVal>> captured_vals = {}):
+        std::unordered_map<std::string, std::shared_ptr<RunTimeVal>> captured_vals):
         RunTimeVal(LambdaType), params(std::move(parameters)), stmts(std::move(statements)),
         captured(captured_vals) {}; 
 
@@ -196,7 +196,7 @@ public:
     static std::shared_ptr<BoolVal> makeBool(bool boolean);
     static std::shared_ptr<LambdaVal> makeLambda(std::vector<std::string> params,
         std::vector<std::shared_ptr<Statement>> stmts, std::unordered_map<std::string, 
-        std::shared_ptr<RunTimeVal>> captured = {});
+        std::shared_ptr<RunTimeVal>> captured);
     static std::shared_ptr<NativeFunctionVal> makeNativeFunction(
         NativeFunctionVal::FuncType func
     );

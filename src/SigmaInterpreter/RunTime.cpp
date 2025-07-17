@@ -53,7 +53,7 @@ std::shared_ptr<RunTimeVal> StringVal::clone() { return RunTimeFactory::makeStri
 std::shared_ptr<RunTimeVal> CharVal::clone() { return nullptr; };
 std::shared_ptr<RunTimeVal> BoolVal::clone() { return RunTimeFactory::makeBool(boolean); };
 std::shared_ptr<RunTimeVal> LambdaVal::clone() { return RunTimeFactory::makeLambda(params,
-     stmts); };
+     stmts, captured); };
 std::shared_ptr<RunTimeVal> ArrayVal::clone() { 
     std::vector<std::shared_ptr<RunTimeVal>> new_arr(vals.size());
     std::transform(vals.begin(), vals.end(), new_arr.begin(),

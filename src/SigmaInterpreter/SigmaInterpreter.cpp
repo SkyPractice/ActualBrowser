@@ -60,8 +60,19 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
             return evaluateVariableReInitStatement(std::dynamic_pointer_cast<VariableReInit>(stmt));
         case FunctionCallExpressionType:
             return evaluateFunctionCallExpression(std::dynamic_pointer_cast<FunctionCallExpression>(stmt));
-        case IdentifierExpressionType:
+        case IdentifierExpressionType:{
+            std::string target = std::dynamic_pointer_cast<IdentifierExpression>(stmt)->str;
+            if(current_scope->traverse("this")){
+                if(current_scope->getVal("this")->type == StructType){
+                    auto vall = std::dynamic_pointer_cast<StructVal>(
+                        current_scope->getVal("this"));
+                    if(vall->vals.contains(target)){
+                        return vall->vals[target]->clone();
+                    }
+                }
+            }
             return current_scope->getVal(std::dynamic_pointer_cast<IdentifierExpression>(stmt)->str);
+        }
         case IfStatementType:
             return evaluateIfStatement(std::dynamic_pointer_cast<IfStatement>(stmt));
         case WhileStatementType:
@@ -346,8 +357,18 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<Fu
         if(!current_scope->variables.contains(var_name))
             current_scope->declareVar(var_name, {var_val, true});
     }
+    if(expr->func_expr->type == MemberAccessExpressionType){
+        auto mem_expr = std::dynamic_pointer_cast<MemberAccessExpression>(expr->func_expr);
+        mem_expr->path.pop_back();
+        current_scope = last_scope;
+        auto mem_val = evaluate(mem_expr);
+        current_scope = arg_scope;
+        current_scope->declareVar("this", { mem_val, true });
+
+    }
+
     auto func_scope = std::make_shared<Scope>(current_scope);
-    ;
+    
     current_scope = func_scope;
 
     RunTimeValue return_val;
