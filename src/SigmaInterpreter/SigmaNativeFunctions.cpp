@@ -77,3 +77,7 @@ RunTimeValue SigmaInterpreter::writeFileSync(std::vector<RunTimeValue> args) {
     strea.close();
     return nullptr;
 };
+
+RunTimeValue SigmaInterpreter::clone(std::vector<RunTimeValue> args) {
+    return args[0]->clone();
+};

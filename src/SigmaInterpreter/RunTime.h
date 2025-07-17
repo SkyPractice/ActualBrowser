@@ -10,7 +10,7 @@
 
 enum RunTimeValType {
     NumType, StringType, CharType, BoolType, LambdaType, ArrayType, StructType, ReturnType,
-    BreakType, ContinueType, NativeFunctionType
+    BreakType, ContinueType, NativeFunctionType, RefrenceType
 };
 
 class RunTimeVal {
@@ -18,6 +18,7 @@ public:
     RunTimeValType type;
     RunTimeVal(RunTimeValType t): type(t) {};
 
+    virtual std::shared_ptr<RunTimeVal> clone() = 0;
     virtual ~RunTimeVal() {};
     virtual std::string getString() { return ""; };
 };
@@ -26,6 +27,8 @@ class NumVal : public RunTimeVal {
 public:
     double num;
     NumVal(double number): RunTimeVal(NumType), num(number) {};
+
+    std::shared_ptr<RunTimeVal> clone() override;
 
     std::string getString() override {
         return std::to_string(num);
@@ -38,6 +41,8 @@ public:
     std::string str;
     StringVal(std::string stri): RunTimeVal(StringType), str(std::move(stri)) {};
 
+    std::shared_ptr<RunTimeVal> clone() override;
+
     std::string getString() override {
         return "\"" + str + "\"";
     };
@@ -47,6 +52,8 @@ class CharVal : public RunTimeVal {
 public:
     char ch;
     CharVal(char cha): RunTimeVal(CharType), ch(cha) {};
+
+    std::shared_ptr<RunTimeVal> clone() override;
 
     std::string getString() override {
         std::string str;
@@ -60,6 +67,8 @@ public:
     bool boolean;
     BoolVal(bool boolea): RunTimeVal(BoolType), boolean(boolea) {};
 
+    std::shared_ptr<RunTimeVal> clone() override;
+
     std::string getString() override {
         if(boolean) return "true";
         else return "false";
@@ -70,10 +79,15 @@ class LambdaVal : public RunTimeVal {
 public:
     std::vector<std::string> params;
     std::vector<std::shared_ptr<Statement>> stmts;
+    std::unordered_map<std::string, std::shared_ptr<RunTimeVal>> captured;
 
     LambdaVal(std::vector<std::string> parameters,
-        std::vector<std::shared_ptr<Statement>> statements):
-        RunTimeVal(LambdaType), params(std::move(parameters)), stmts(std::move(statements)) {}; 
+        std::vector<std::shared_ptr<Statement>> statements,
+        std::unordered_map<std::string, std::shared_ptr<RunTimeVal>> captured_vals = {}):
+        RunTimeVal(LambdaType), params(std::move(parameters)), stmts(std::move(statements)),
+        captured(captured_vals) {}; 
+
+    std::shared_ptr<RunTimeVal> clone() override;
 
     std::string getString() override {
         return "<Lambda>";
@@ -96,6 +110,8 @@ public:
         str += "]";
         return str;
     }
+
+    std::shared_ptr<RunTimeVal> clone() override;
 };
 
 class StructVal : public RunTimeVal {
@@ -107,6 +123,8 @@ public:
     std::string getString() override {
         return "<struct>";
     }
+
+    std::shared_ptr<RunTimeVal> clone() override;
 };
 
 class ReturnVal : public RunTimeVal {
@@ -114,16 +132,22 @@ public:
     std::shared_ptr<RunTimeVal> val;
 
     ReturnVal(std::shared_ptr<RunTimeVal> value): RunTimeVal(ReturnType), val(std::move(value)) {};
+
+    std::shared_ptr<RunTimeVal> clone() override;
 };
 
 class BreakVal : public RunTimeVal {
 public:
     BreakVal(): RunTimeVal(BreakType) {};
+
+    std::shared_ptr<RunTimeVal> clone() override;
 };
 
 class ContinueVal : public RunTimeVal {
 public:
     ContinueVal(): RunTimeVal(ContinueType) {};
+
+    std::shared_ptr<RunTimeVal> clone() override;
 };
 
 class NativeFunctionVal : public RunTimeVal {
@@ -132,6 +156,17 @@ public:
     FuncType func;
 
     NativeFunctionVal(FuncType functio): RunTimeVal(NativeFunctionType), func(std::move(functio)) {};
+
+    std::shared_ptr<RunTimeVal> clone() override;
+};
+
+class RefrenceVal : public RunTimeVal {
+public:
+    std::shared_ptr<RunTimeVal>* val;
+
+    RefrenceVal(std::shared_ptr<RunTimeVal>* value): RunTimeVal(RefrenceType), val(value) {};
+
+    std::shared_ptr<RunTimeVal> clone() override;
 };
 
 class RunTimeMemory {
@@ -160,8 +195,12 @@ public:
     static std::shared_ptr<ContinueVal> makeContinue();
     static std::shared_ptr<BoolVal> makeBool(bool boolean);
     static std::shared_ptr<LambdaVal> makeLambda(std::vector<std::string> params,
-        std::vector<std::shared_ptr<Statement>> stmts);
+        std::vector<std::shared_ptr<Statement>> stmts, std::unordered_map<std::string, 
+        std::shared_ptr<RunTimeVal>> captured = {});
     static std::shared_ptr<NativeFunctionVal> makeNativeFunction(
         NativeFunctionVal::FuncType func
+    );
+    static std::shared_ptr<RefrenceVal> makeRefrence(
+        std::shared_ptr<RunTimeVal>* val
     );
 };

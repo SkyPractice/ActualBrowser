@@ -23,7 +23,8 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
             return RunTimeFactory::makeBool(std::dynamic_pointer_cast<BoolExpression>(stmt)->val);
         case LambdaExpressionType:{
             auto stm = std::dynamic_pointer_cast<LambdaExpression>(stmt);
-            return RunTimeFactory::makeLambda((stm->params), (stm->stmts));
+            return RunTimeFactory::makeLambda((stm->params), (stm->stmts),
+                current_scope->flatten());
         }
         case ArrayExpressionType:{
             auto stm = std::dynamic_pointer_cast<ArrayExpression>(stmt);
@@ -234,9 +235,28 @@ RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> pro
     std::unordered_map<std::string, RunTimeValue> str_vals;
     str_vals.insert({"valueOf", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::toString)});
 
+    std::unordered_map<std::string, RunTimeValue> obj_vals;
+    obj_vals.insert({"ref", RunTimeFactory::makeNativeFunction(
+        [this](std::vector<std::shared_ptr<RunTimeVal>> vals) { 
+        return RunTimeFactory::makeRefrence(&current_scope->getVal(
+            std::dynamic_pointer_cast<StringVal>(vals[0])->str
+        ));
+        }
+    )    
+    });
+    obj_vals.insert({"val_by_ref", RunTimeFactory::makeNativeFunction(
+        [this](std::vector<std::shared_ptr<RunTimeVal>> vals) { 
+            return *std::dynamic_pointer_cast<RefrenceVal>(vals[0])->val;
+        }
+    )    
+    });
+    obj_vals.insert({"clone", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::clone)});
+
     current_scope->declareVar("Files", { RunTimeFactory::makeStruct((io_vals)) ,true });
     current_scope->declareVar("Console", { RunTimeFactory::makeStruct((console_vals)) ,true });
     current_scope->declareVar("String", { RunTimeFactory::makeStruct((str_vals)), true });
+    current_scope->declareVar("Object", { RunTimeFactory::makeStruct((obj_vals)), true });
+
     for(auto& stmt : program->stmts){
         evaluate(stmt);
     }
@@ -271,12 +291,23 @@ RunTimeValue SigmaInterpreter::evaluateBinaryExpression(std::shared_ptr<BinaryEx
 };
 
 RunTimeValue SigmaInterpreter::evaluateVariableDeclStatement(std::shared_ptr<VariableDecleration> decl) {
+    if(decl->expr->type == IdentifierExpressionType || MemberAccessExpressionType ||
+         IndexAccessExpressionType || FunctionCallExpressionType){
+        current_scope->declareVar(decl->var_name, { evaluate(decl->expr)->clone(),
+         decl->is_const });
+        return nullptr;
+    }
     current_scope->declareVar(decl->var_name, { evaluate(decl->expr),
          decl->is_const });
     return nullptr;
 };
 
 RunTimeValue SigmaInterpreter::evaluateVariableReInitStatement(std::shared_ptr<VariableReInit> decl) {
+    if(decl->expr->type == IdentifierExpressionType || MemberAccessExpressionType ||
+         IndexAccessExpressionType || FunctionCallExpressionType){
+        current_scope->reInitVar(decl->var_name,  evaluate(decl->expr)->clone());
+        return nullptr;
+    }
     current_scope->reInitVar(decl->var_name, evaluate(decl->expr));
     return nullptr;
 };
@@ -286,7 +317,7 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<Fu
     std::vector<RunTimeValue> args(expr->args.size());
 
     std::transform(expr->args.begin(), expr->args.end(), args.begin(),
-        [this](Expr& expr){ return evaluate(expr); });
+        [this](Expr& expr){ return evaluate(expr)->clone(); });
     
     // if(expr->func_expr->type == IdentifierExpressionType){
     //     std::string name = std::dynamic_pointer_cast<IdentifierExpression>(expr->func_expr)->str;
@@ -303,11 +334,17 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<Fu
     if (func->type != LambdaType)
       throw std::runtime_error("<obj> is not a callable");
     auto actual_func = std::dynamic_pointer_cast<LambdaVal>(func);
+    
+    auto last_scope = current_scope;
 
-    auto arg_scope = std::make_shared<Scope>(current_scope);
+    auto arg_scope = std::make_shared<Scope>(nullptr);
     current_scope = arg_scope;
     for (int i = 0; i < args.size(); i++) {
       current_scope->declareVar(actual_func->params[i], {args[i], false});
+    }
+    for(auto& [var_name, var_val] : actual_func->captured){
+        if(!current_scope->variables.contains(var_name))
+            current_scope->declareVar(var_name, {var_val, true});
     }
     auto func_scope = std::make_shared<Scope>(current_scope);
     ;
@@ -326,7 +363,7 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<Fu
     }
 
     current_scope = current_scope->parent;
-    current_scope = current_scope->parent;
+    current_scope = last_scope;
 
     return return_val;
 };

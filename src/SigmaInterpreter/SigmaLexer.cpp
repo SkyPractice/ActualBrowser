@@ -17,7 +17,7 @@ std::vector<SigmaToken> SigmaLexer::tokenize(std::string code) {
 
         if(isalpha(current_char)){
             std::string str;
-            while(isalpha(current_char)){
+            while(isalpha(current_char) || current_char == '_' || isdigit(current_char)){
                 str.push_back(current_char);
                 advance();
             }

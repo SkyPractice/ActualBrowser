@@ -29,7 +29,7 @@ public:
         return nullptr;
     };
 
-    RunTimeValue getVal(std::string var_name){
+    RunTimeValue& getVal(std::string var_name){
         auto scope = traverse(var_name);
         if(!scope){ throw std::runtime_error("variable " + var_name + " not found"); };
         return scope->variables[var_name].value;
@@ -45,6 +45,28 @@ public:
         if(!scope) { throw std::runtime_error("identifier " + name + " not found"); };
         if(scope->variables[name].is_const) { throw std::runtime_error("Can't ReInitialize A Variable Marked As A Const"); };
         scope->variables[name].value = val;
+    }
+
+    std::unordered_map<std::string, RunTimeValue> flatten(){
+        std::vector<std::pair<std::string, RunTimeValue>> actual_vec;
+        flatten_recursively(actual_vec);
+
+        std::unordered_map<std::string, RunTimeValue> hash_map;
+
+        for(auto& [var_name, var_val] : actual_vec){
+            hash_map.insert({var_name, var_val});
+        }
+
+        return hash_map;
+    }
+
+    void flatten_recursively(std::vector<std::pair<std::string, RunTimeValue>>& vec){
+        for(const auto& [var_name, var_val] : variables) {
+            vec.push_back({var_name, var_val.value});
+        }
+        if(parent){
+            parent->flatten_recursively(vec);
+        }
     }
 };
 
@@ -89,4 +111,5 @@ public:
     static RunTimeValue numIota(std::vector<RunTimeValue> args);
     static RunTimeValue readFileSync(std::vector<RunTimeValue> args);
     static RunTimeValue writeFileSync(std::vector<RunTimeValue> args);
+    static RunTimeValue clone(std::vector<RunTimeValue> args);
 };
