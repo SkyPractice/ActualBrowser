@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 typedef std::shared_ptr<Statement> Stmt;
 typedef std::shared_ptr<Expression> Expr;
@@ -112,4 +113,6 @@ public:
     static RunTimeValue readFileSync(std::vector<RunTimeValue> args);
     static RunTimeValue writeFileSync(std::vector<RunTimeValue> args);
     static RunTimeValue clone(std::vector<RunTimeValue> args);
+    static RunTimeValue input(std::vector<RunTimeValue> args);
+    static RunTimeValue getCurrentTimeMillis(std::vector<RunTimeValue> args);
 };

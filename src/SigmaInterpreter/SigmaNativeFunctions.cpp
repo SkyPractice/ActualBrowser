@@ -8,6 +8,8 @@
 #include <iostream>
 #include <ostream>
 #include <stdexcept>
+#include <string>
+#include <chrono>
 
 RunTimeValue SigmaInterpreter::println(std::vector<RunTimeValue> args){
     if(!std::all_of(args.begin(), args.end(), [](RunTimeValue& arg){
@@ -80,4 +82,18 @@ RunTimeValue SigmaInterpreter::writeFileSync(std::vector<RunTimeValue> args) {
 
 RunTimeValue SigmaInterpreter::clone(std::vector<RunTimeValue> args) {
     return args[0]->clone();
+};
+
+RunTimeValue SigmaInterpreter::input(std::vector<RunTimeValue> args) {
+    std::string str;
+    std::getline(std::cin, str);
+    return RunTimeFactory::makeString(str);
+};
+
+RunTimeValue SigmaInterpreter::getCurrentTimeMillis(std::vector<RunTimeValue> args) {
+    std::chrono::time_point tim = std::chrono::high_resolution_clock::now();
+    long actual_time = std::chrono::time_point_cast<std::chrono::milliseconds>(
+        tim).time_since_epoch().count();
+    
+    return RunTimeFactory::makeNum(actual_time);
 };

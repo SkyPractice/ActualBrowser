@@ -2,14 +2,12 @@
 #include "RunTime.h"
 #include "SigmaAst.h"
 #include <algorithm>
-#include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
 
 SigmaInterpreter::SigmaInterpreter(){
-
 };
 
 RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
@@ -237,6 +235,7 @@ RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> pro
     std::unordered_map<std::string, RunTimeValue> console_vals;
     console_vals.insert({"println", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::println)});
     console_vals.insert({"print", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::print)});
+    console_vals.insert({"input", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::input)});
     console_vals.insert({"toString", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::toString)});
     
     std::unordered_map<std::string, RunTimeValue> io_vals;
@@ -255,7 +254,7 @@ RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> pro
         }
     )    
     });
-    obj_vals.insert({"val_by_ref", RunTimeFactory::makeNativeFunction(
+    obj_vals.insert({"valByRef", RunTimeFactory::makeNativeFunction(
         [this](std::vector<std::shared_ptr<RunTimeVal>> vals) { 
             return *std::dynamic_pointer_cast<RefrenceVal>(vals[0])->val;
         }
@@ -263,10 +262,14 @@ RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> pro
     });
     obj_vals.insert({"clone", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::clone)});
 
+    std::unordered_map<std::string, RunTimeValue> tim_vals;
+    tim_vals.insert({"getCurrentTimeMillis", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::getCurrentTimeMillis)});
+
     current_scope->declareVar("Files", { RunTimeFactory::makeStruct((io_vals)) ,true });
     current_scope->declareVar("Console", { RunTimeFactory::makeStruct((console_vals)) ,true });
     current_scope->declareVar("String", { RunTimeFactory::makeStruct((str_vals)), true });
     current_scope->declareVar("Object", { RunTimeFactory::makeStruct((obj_vals)), true });
+    current_scope->declareVar("Time", {RunTimeFactory::makeStruct(tim_vals), true});
 
     for(auto& stmt : program->stmts){
         evaluate(stmt);
