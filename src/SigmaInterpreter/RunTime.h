@@ -150,7 +150,8 @@ public:
     std::shared_ptr<RunTimeVal> clone() override;
 };
 
-class NativeFunctionVal : public RunTimeVal {
+// not copyable, copying will result in shared_from_this()
+class NativeFunctionVal : public RunTimeVal, public std::enable_shared_from_this<NativeFunctionVal> {
 public:
     using FuncType = std::function<std::shared_ptr<RunTimeVal>(std::vector<std::shared_ptr<RunTimeVal>>)>;    
     FuncType func;

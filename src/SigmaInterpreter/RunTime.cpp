@@ -71,4 +71,4 @@ std::shared_ptr<RunTimeVal> ReturnVal::clone() { return RunTimeFactory::makeRetu
 std::shared_ptr<RunTimeVal> BreakVal::clone() { return RunTimeFactory::makeBreak(); };
 std::shared_ptr<RunTimeVal> ContinueVal::clone() { return RunTimeFactory::makeContinue(); };
 std::shared_ptr<RunTimeVal> RefrenceVal::clone() { return RunTimeFactory::makeRefrence(val); };
-std::shared_ptr<RunTimeVal> NativeFunctionVal::clone() { return RunTimeFactory::makeNativeFunction(func); };
+std::shared_ptr<RunTimeVal> NativeFunctionVal::clone() { return shared_from_this(); };

@@ -120,4 +120,15 @@ public:
     static RunTimeValue input(std::vector<RunTimeValue> args);
     static RunTimeValue getCurrentTimeMillis(std::vector<RunTimeValue> args);
     static RunTimeValue resizeArray(std::vector<RunTimeValue> args);
+    static RunTimeValue pushBackArray(std::vector<RunTimeValue> args);
+    static RunTimeValue popBackArray(std::vector<RunTimeValue> args);
+    static RunTimeValue pushFirstArray(std::vector<RunTimeValue> args);
+    static RunTimeValue popFirstArray(std::vector<RunTimeValue> args);
+    static RunTimeValue insertIntoArray(std::vector<RunTimeValue> args);
+    static RunTimeValue copyIfRecommended(RunTimeValue val){
+        if(val->type == StructType || val->type == LambdaType || val->type == StringType ||
+            val->type == ArrayType)
+            return val;
+        return val->clone();
+    }
 };

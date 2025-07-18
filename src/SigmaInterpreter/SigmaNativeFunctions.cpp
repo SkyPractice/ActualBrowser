@@ -1,6 +1,7 @@
 #include "RunTime.h"
 #include "SigmaInterpreter.h"
 #include <algorithm>
+#include <cstddef>
 #include <fstream>
 #include <memory>
 #include <numeric>
@@ -99,5 +100,36 @@ RunTimeValue SigmaInterpreter::getCurrentTimeMillis(std::vector<RunTimeValue> ar
 };
 
 RunTimeValue SigmaInterpreter::resizeArray(std::vector<RunTimeValue> args) {
-    auto my_ref = std::dynamic_pointer_cast<RefrenceVal>(args[0]);
+    auto arr = std::dynamic_pointer_cast<ArrayVal>(args[0]);
+    auto new_size = static_cast<size_t>(std::dynamic_pointer_cast<NumVal>(args[1])->num);
+
+    arr->vals.resize(new_size);
+    return args[1];
+};
+
+RunTimeValue SigmaInterpreter::pushBackArray(std::vector<RunTimeValue> args){
+    auto arr = std::dynamic_pointer_cast<ArrayVal>(args[0]);
+    arr->vals.push_back(copyIfRecommended(args[1]));
+    return nullptr;
+};
+RunTimeValue SigmaInterpreter::popBackArray(std::vector<RunTimeValue> args){
+    auto arr = std::dynamic_pointer_cast<ArrayVal>(args[0]);
+    arr->vals.pop_back();
+    return nullptr;
+};
+RunTimeValue SigmaInterpreter::pushFirstArray(std::vector<RunTimeValue> args){
+    auto arr = std::dynamic_pointer_cast<ArrayVal>(args[0]);
+    arr->vals.insert(arr->vals.begin(), copyIfRecommended(args[1]));
+    return nullptr;
+};
+RunTimeValue SigmaInterpreter::popFirstArray(std::vector<RunTimeValue> args){
+    auto arr = std::dynamic_pointer_cast<ArrayVal>(args[0]);
+    arr->vals.erase(arr->vals.begin());
+    return nullptr;
+};
+RunTimeValue SigmaInterpreter::insertIntoArray(std::vector<RunTimeValue> args){
+    auto arr = std::dynamic_pointer_cast<ArrayVal>(args[0]);
+    size_t index = static_cast<size_t>(std::dynamic_pointer_cast<NumVal>(args[1])->num);
+    arr->vals.insert(arr->vals.begin() + index, copyIfRecommended(args[2]));
+    return nullptr;
 };

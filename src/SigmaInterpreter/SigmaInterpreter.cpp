@@ -251,6 +251,7 @@ RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> pro
     str_vals.insert({"valueOf", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::toString)});
 
     std::unordered_map<std::string, RunTimeValue> obj_vals;
+
     obj_vals.insert({"ref", RunTimeFactory::makeNativeFunction(
         [this](std::vector<std::shared_ptr<RunTimeVal>> vals) { 
         return RunTimeFactory::makeRefrence(&current_scope->getVal(
@@ -270,11 +271,19 @@ RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> pro
     std::unordered_map<std::string, RunTimeValue> tim_vals;
     tim_vals.insert({"getCurrentTimeMillis", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::getCurrentTimeMillis)});
 
+    std::unordered_map<std::string, RunTimeValue> arr_vals;
+    arr_vals.insert({"push", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::pushBackArray)});
+    arr_vals.insert({"pop", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::popBackArray)});
+    arr_vals.insert({"pushFirst", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::pushFirstArray)});
+    arr_vals.insert({"popFirst", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::popFirstArray)});
+    arr_vals.insert({"insert", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::insertIntoArray)});
+
     current_scope->declareVar("Files", { RunTimeFactory::makeStruct((io_vals)) ,true });
     current_scope->declareVar("Console", { RunTimeFactory::makeStruct((console_vals)) ,true });
     current_scope->declareVar("String", { RunTimeFactory::makeStruct((str_vals)), true });
     current_scope->declareVar("Object", { RunTimeFactory::makeStruct((obj_vals)), true });
     current_scope->declareVar("Time", {RunTimeFactory::makeStruct(tim_vals), true});
+    current_scope->declareVar("Array", {RunTimeFactory::makeStruct(arr_vals), true});
 
     for(auto& stmt : program->stmts){
         evaluate(stmt);
@@ -310,35 +319,42 @@ RunTimeValue SigmaInterpreter::evaluateBinaryExpression(std::shared_ptr<BinaryEx
 };
 
 RunTimeValue SigmaInterpreter::evaluateVariableDeclStatement(std::shared_ptr<VariableDecleration> decl) {
-    if(decl->expr->type == IdentifierExpressionType || MemberAccessExpressionType ||
-         IndexAccessExpressionType || FunctionCallExpressionType){
-        current_scope->declareVar(decl->var_name, { evaluate(decl->expr)->clone(),
+    auto val = evaluate(decl->expr);
+    if(val->type == ArrayType || val->type == StringType ||
+         val->type == StructType || val->type == LambdaType){
+        current_scope->declareVar(decl->var_name, { val,
          decl->is_const });
         return nullptr;
     }
-    current_scope->declareVar(decl->var_name, { evaluate(decl->expr),
+    current_scope->declareVar(decl->var_name, { val->clone(),
          decl->is_const });
     return nullptr;
 };
 
 RunTimeValue SigmaInterpreter::evaluateVariableReInitStatement(std::shared_ptr<VariableReInit> decl) {
-    if(decl->expr->type == IdentifierExpressionType || MemberAccessExpressionType ||
-        IndexAccessExpressionType || FunctionCallExpressionType){
-        if(current_scope->traverse("this")){
-            if(current_scope->getVal("this")->type == StructType){
-                auto vall = std::dynamic_pointer_cast<StructVal>(
-                    current_scope->getVal("this"));
-                if(vall->vals.contains(decl->var_name)){
+    if(current_scope->traverse("this")){
+        if(current_scope->getVal("this")->type == StructType){
+            auto vall = std::dynamic_pointer_cast<StructVal>(
+                current_scope->getVal("this"));
+            if(vall->vals.contains(decl->var_name)){
+                auto v = evaluate(decl->expr);
+                if(v->type == ArrayType || v->type == StringType || v->type == StructType ||
+                     v->type == LambdaType){
                     std::dynamic_pointer_cast<StructVal>(current_scope->getVal("this"))->vals[decl->var_name]
-                        = evaluate(decl->expr)->clone();
-                    return nullptr;
+                        = v;
                 }
+                else {
+                    std::dynamic_pointer_cast<StructVal>(current_scope->getVal("this"))->vals[decl->var_name]
+                        = v->clone();
+                } 
+                return nullptr;
             }
         }
-        current_scope->reInitVar(decl->var_name,  evaluate(decl->expr)->clone());
-        return nullptr;
     }
-    current_scope->reInitVar(decl->var_name, evaluate(decl->expr));
+    auto v = evaluate(decl->expr);
+    if(v->type == ArrayType || v->type == StringType || v->type == StructType || v->type == LambdaType)
+        current_scope->reInitVar(decl->var_name, v);
+    else current_scope->reInitVar(decl->var_name, v->clone());
     return nullptr;
 };
 
@@ -347,7 +363,12 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<Fu
     std::vector<RunTimeValue> args(expr->args.size());
 
     std::transform(expr->args.begin(), expr->args.end(), args.begin(),
-        [this](Expr& expr){ return evaluate(expr)->clone(); });
+        [this](Expr& expr){ 
+            auto va = evaluate(expr);
+            if(va->type == StructType || va->type == ArrayType || va->type == StringType)
+                return va;
+            return va->clone();
+        });
     // if(expr->func_expr->type == IdentifierExpressionType){
     //     std::string name = std::dynamic_pointer_cast<IdentifierExpression>(expr->func_expr)->str;
     //     std::cout << "Function name: " << name << std::endl;
