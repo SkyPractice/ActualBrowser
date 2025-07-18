@@ -1,8 +1,3 @@
-var counter = 0
-
-while counter < 20 {
-    println("helloworld   " + toString(counter))
-    counter = counter + 1
+for var i = -10, i < 0, ++i {
+    Console.println(String.valueOf(i))
 }
-
-println("dsdssda  a")

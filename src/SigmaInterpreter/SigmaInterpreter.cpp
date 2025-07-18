@@ -2,6 +2,7 @@
 #include "RunTime.h"
 #include "SigmaAst.h"
 #include <algorithm>
+#include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -65,7 +66,7 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
                     auto vall = std::dynamic_pointer_cast<StructVal>(
                         current_scope->getVal("this"));
                     if(vall->vals.contains(target)){
-                        return vall->vals[target]->clone();
+                        return vall->vals[target];
                     }
                 }
             }
@@ -94,6 +95,10 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
             return evaluateMemberAccessExpression(std::dynamic_pointer_cast<MemberAccessExpression>(stmt));
         case MemberReInitExpressionType:
             return evaluateMemberReInitStatement(std::dynamic_pointer_cast<MemberReInitExpression>(stmt));
+        case IncrementExpressionType:
+            return evaluateIncrementExpression(std::dynamic_pointer_cast<IncrementExpression>(stmt));
+        case NegativeExpressionType:
+            return evaluateNegativeExpression(std::dynamic_pointer_cast<NegativeExpression>(stmt));
         default: throw std::runtime_error("Not Implemented " + std::to_string(stmt->type));
     }
 };
@@ -318,7 +323,18 @@ RunTimeValue SigmaInterpreter::evaluateVariableDeclStatement(std::shared_ptr<Var
 
 RunTimeValue SigmaInterpreter::evaluateVariableReInitStatement(std::shared_ptr<VariableReInit> decl) {
     if(decl->expr->type == IdentifierExpressionType || MemberAccessExpressionType ||
-         IndexAccessExpressionType || FunctionCallExpressionType){
+        IndexAccessExpressionType || FunctionCallExpressionType){
+        if(current_scope->traverse("this")){
+            if(current_scope->getVal("this")->type == StructType){
+                auto vall = std::dynamic_pointer_cast<StructVal>(
+                    current_scope->getVal("this"));
+                if(vall->vals.contains(decl->var_name)){
+                    std::dynamic_pointer_cast<StructVal>(current_scope->getVal("this"))->vals[decl->var_name]
+                        = evaluate(decl->expr)->clone();
+                    return nullptr;
+                }
+            }
+        }
         current_scope->reInitVar(decl->var_name,  evaluate(decl->expr)->clone());
         return nullptr;
     }
@@ -332,7 +348,6 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<Fu
 
     std::transform(expr->args.begin(), expr->args.end(), args.begin(),
         [this](Expr& expr){ return evaluate(expr)->clone(); });
-    
     // if(expr->func_expr->type == IdentifierExpressionType){
     //     std::string name = std::dynamic_pointer_cast<IdentifierExpression>(expr->func_expr)->str;
     //     std::cout << "Function name: " << name << std::endl;
@@ -459,6 +474,11 @@ RunTimeValue SigmaInterpreter::evaluateIndexReInitStatement(std::shared_ptr<Inde
         return nullptr;
     }
     auto latest_val = std::dynamic_pointer_cast<ArrayVal>(val);
+    if(stmt->val->type == IdentifierExpressionType || MemberAccessExpressionType ||
+        IndexAccessExpressionType || FunctionCallExpressionType){
+        latest_val->vals[static_cast<int>(latest_num->num)] = evaluate(stmt->val)->clone();
+        return nullptr;
+    }
     latest_val->vals[static_cast<int>(latest_num->num)] = evaluate(stmt->val);
     return nullptr;
 };
@@ -568,6 +588,47 @@ RunTimeValue SigmaInterpreter::evaluateMemberReInitStatement(
     }
 
     auto latest_val = std::dynamic_pointer_cast<StructVal>(val);
+    if(expr->val->type == IdentifierExpressionType || MemberAccessExpressionType ||
+        IndexAccessExpressionType || FunctionCallExpressionType){
+        latest_val->vals[latest_str] = evaluate(expr->val)->clone();
+        return nullptr;
+    }
     latest_val->vals[latest_str] = evaluate(expr->val);
     return nullptr;
+};
+
+
+RunTimeValue SigmaInterpreter::evaluateIncrementExpression(std::shared_ptr<IncrementExpression> expr) {
+    auto current_val = evaluate(expr->expr);
+
+    if(current_val->type != NumType) throw std::runtime_error("can't increment a non-number");
+    double actual_val = std::dynamic_pointer_cast<NumVal>(current_val)->num;
+    if(expr->expr->type == IdentifierExpressionType){
+        std::string name = std::dynamic_pointer_cast<IdentifierExpression>(expr->expr)->str;
+        evaluateVariableReInitStatement(std::make_shared<VariableReInit>(name, 
+            std::make_shared<NumericExpression>(actual_val + expr->amount)));
+    } else if (expr->expr->type == MemberAccessExpressionType){
+        auto ac_expr = std::dynamic_pointer_cast<MemberAccessExpression>(expr->expr);
+        evaluateMemberReInitStatement(std::make_shared<MemberReInitExpression>(
+            ac_expr->struct_expr, ac_expr->path, std::make_shared<NumericExpression>(actual_val + expr->amount)
+        ));
+    } else if (expr->expr->type == ArrayExpressionType){
+        auto ac_expr = std::dynamic_pointer_cast<IndexAccessExpression>(expr->expr);
+        evaluateIndexReInitStatement(std::make_shared<IndexReInitStatement>(
+            ac_expr->array_expr, ac_expr->path, std::make_shared<NumericExpression>(actual_val + expr->amount)
+        ));
+    }
+    return RunTimeFactory::makeNum(actual_val + expr->amount);
+};
+RunTimeValue SigmaInterpreter::evaluateDecrementExpression(std::shared_ptr<DecrementExpression> expr) {
+    return {};
+};
+RunTimeValue SigmaInterpreter::evaluateNegativeExpression(std::shared_ptr<NegativeExpression> expr) {
+    auto val = evaluate(expr->expr);
+    if(val->type != NumType)
+        throw std::runtime_error("can't make a non-number value negative");
+
+    double num = std::dynamic_pointer_cast<NumVal>(val)->num;
+
+    return RunTimeFactory::makeNum(-num);
 };

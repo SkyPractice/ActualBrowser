@@ -97,3 +97,7 @@ RunTimeValue SigmaInterpreter::getCurrentTimeMillis(std::vector<RunTimeValue> ar
     
     return RunTimeFactory::makeNum(actual_time);
 };
+
+RunTimeValue SigmaInterpreter::resizeArray(std::vector<RunTimeValue> args) {
+    auto my_ref = std::dynamic_pointer_cast<RefrenceVal>(args[0]);
+};

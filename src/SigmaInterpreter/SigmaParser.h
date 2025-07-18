@@ -19,6 +19,7 @@ public:
     Stmt parseStructDeclerationStmt();
     Stmt parseIndexReInitStmt(Expr arr);
     Stmt parseMemberReInitStmt(Expr stru);
+    Stmt parseCompoundAssignmentStmt(Expr targ_expr);
 
     Expr parseExpr();
     Expr parseAddExpr();
@@ -32,6 +33,7 @@ public:
     Expr parseIndexExpr(Expr arr);
     Expr parseStructExpr();
     Expr parseMemberAccessExpr(Expr struc);
+    
 
     std::vector<SigmaToken>::iterator itr;
 

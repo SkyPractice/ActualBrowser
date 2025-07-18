@@ -95,6 +95,9 @@ public:
     RunTimeValue evaluateFunctionCallExpression(std::shared_ptr<FunctionCallExpression> expr);
     RunTimeValue evaluateIndexAccessExpression(std::shared_ptr<IndexAccessExpression> expr);
     RunTimeValue evaluateMemberAccessExpression(std::shared_ptr<MemberAccessExpression> expr);
+    RunTimeValue evaluateIncrementExpression(std::shared_ptr<IncrementExpression> expr);
+    RunTimeValue evaluateDecrementExpression(std::shared_ptr<DecrementExpression> expr);
+    RunTimeValue evaluateNegativeExpression(std::shared_ptr<NegativeExpression> expr);
 
     // Shadowing Is Allowed
     RunTimeValue evaluateVariableDeclStatement(std::shared_ptr<VariableDecleration> decl);
@@ -105,6 +108,7 @@ public:
     RunTimeValue evaluateIndexReInitStatement(std::shared_ptr<IndexReInitStatement> stmt);
     RunTimeValue evaluateStructDeclStatement(std::shared_ptr<StructDeclerationStatement> stmt);
     RunTimeValue evaluateMemberReInitStatement(std::shared_ptr<MemberReInitExpression> expr);
+    RunTimeValue evaluateCompoundAssignmentStatement(std::shared_ptr<CompoundAssignmentStatement> stmt);
 
     static RunTimeValue print(std::vector<RunTimeValue> args);
     static RunTimeValue println(std::vector<RunTimeValue> args);
@@ -115,4 +119,5 @@ public:
     static RunTimeValue clone(std::vector<RunTimeValue> args);
     static RunTimeValue input(std::vector<RunTimeValue> args);
     static RunTimeValue getCurrentTimeMillis(std::vector<RunTimeValue> args);
+    static RunTimeValue resizeArray(std::vector<RunTimeValue> args);
 };

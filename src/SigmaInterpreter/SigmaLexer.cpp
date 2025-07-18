@@ -79,6 +79,19 @@ std::vector<SigmaToken> SigmaLexer::tokenize(std::string code) {
             } else if(the_str == "=" && code [current_pos + 1] == '='){
                 the_str.push_back('=');
                 advance();
+            } else if(known_tokens.contains(the_str) && code [current_pos + 1] == '='){
+                if(known_tokens.at(the_str) == BinaryOperator){
+                    the_str.push_back('=');
+                    advance();
+                    advance();
+                    tokens.push_back({ CompoundAssignmentOperator, the_str });
+                }
+            } else if(the_str == "+" && code[current_pos + 1] == '+'){
+                the_str.push_back('+');
+                advance();
+            } else if (the_str == "-" && code[current_pos + 1] == '-'){
+                the_str.push_back('-');
+                advance();
             }
 
             if(known_tokens.contains(the_str))

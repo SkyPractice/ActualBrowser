@@ -55,6 +55,8 @@ Stmt SigmaParser::parseStmt() {
                 auto express = parseExpr();
                 return std::make_shared<MemberReInitExpression>(expression->struct_expr,
                     expression->path, express);
+            } else if (itr->type == CompoundAssignmentOperator){
+                return parseCompoundAssignmentStmt(expr);
             }
             return expr;
         }break;
@@ -142,6 +144,10 @@ Expr SigmaParser::parseBitWiseExpr() {
     return left;
 };
 Expr SigmaParser::parsePrimaryExpr() {
+    if(itr->symbol == "-"){
+        advance();
+        return std::make_shared<NegativeExpression>(parseExpr());
+    }
     switch (itr->type) {
         case Number:
             return std::make_shared<NumericExpression>(std::stod(advance().symbol));
@@ -171,6 +177,13 @@ Expr SigmaParser::parsePrimaryExpr() {
             return parseArrayExpr();
         case New:
             return parseStructExpr();
+        case Increment:
+            advance();
+            return std::make_shared<IncrementExpression>(parseExpr(), 1);
+        case Decrement:
+            advance();
+            return std::make_shared<IncrementExpression>(parseExpr() , -1);
+        case Negative:
         default: throw std::runtime_error("Expression Type Not Implemented " + std::to_string(itr->type));
     }
 };
@@ -368,4 +381,10 @@ Expr SigmaParser::parseMemberAccessExpr(Expr struc) {
     }
 
     return std::make_shared<MemberAccessExpression>(struc, path);
+};
+
+Stmt SigmaParser::parseCompoundAssignmentStmt(Expr targ_expr) {
+    std::string op = advance().symbol;
+    Expr val = parseExpr();
+    return std::make_shared<CompoundAssignmentStatement>(targ_expr, op, val);
 };

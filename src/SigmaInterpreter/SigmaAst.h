@@ -12,7 +12,8 @@ enum SigmaAstType {
     IndexReInitStatementType,
     MemberAccessExpressionType, PropertyDeclerationType, NameSpaceType, IdentifierExpressionType,
     FunctionCallExpressionType, ContinueStatementType, ReturnStatementType, BreakStatementType,
-    MemberReInitExpressionType
+    MemberReInitExpressionType, IncrementExpressionType, DecrementExpressionType, 
+    CompoundAssignmentStatementType, NegativeExpressionType
 };
 
 class Statement {
@@ -266,4 +267,42 @@ public:
     MemberReInitExpression(std::shared_ptr<Expression> expr, std::vector<std::string> vec, 
         std::shared_ptr<Expression> v): Expression(MemberReInitExpressionType),
         struct_expr(expr), path(vec), val(v) {};
+};
+
+class IncrementExpression : public Expression {
+public:
+    std::shared_ptr<Expression> expr;
+    double amount;
+
+    IncrementExpression(std::shared_ptr<Expression> actual_expr,
+        double amou): Expression(IncrementExpressionType),
+        expr(actual_expr), amount(amou) {};
+};
+
+class DecrementExpression : public Expression {
+public:
+    std::shared_ptr<Expression> expr;
+
+    DecrementExpression(std::shared_ptr<Expression> actual_expr):
+        Expression(DecrementExpressionType),
+        expr(actual_expr) {};
+};
+
+class CompoundAssignmentStatement : public Statement {
+public:
+    std::shared_ptr<Expression> expr;
+    std::shared_ptr<Expression> amount;
+    std::string oper;
+
+    CompoundAssignmentStatement(std::shared_ptr<Expression> exprr, std::string op,
+        std::shared_ptr<Expression> actual_amount): Statement(CompoundAssignmentStatementType),
+        expr(exprr), amount(actual_amount), oper(op) {};
+};
+
+class NegativeExpression : public Expression {
+public:
+    std::shared_ptr<Expression> expr;
+
+    NegativeExpression(std::shared_ptr<Expression> actual_expr): Expression(NegativeExpressionType),
+        expr(actual_expr) {};
 };
