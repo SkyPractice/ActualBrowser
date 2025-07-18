@@ -110,25 +110,31 @@ public:
     RunTimeValue evaluateMemberReInitStatement(std::shared_ptr<MemberReInitExpression> expr);
     RunTimeValue evaluateCompoundAssignmentStatement(std::shared_ptr<CompoundAssignmentStatement> stmt);
 
-    static RunTimeValue print(std::vector<RunTimeValue> args);
-    static RunTimeValue println(std::vector<RunTimeValue> args);
-    static RunTimeValue toString(std::vector<RunTimeValue> args);
-    static RunTimeValue numIota(std::vector<RunTimeValue> args);
-    static RunTimeValue readFileSync(std::vector<RunTimeValue> args);
-    static RunTimeValue writeFileSync(std::vector<RunTimeValue> args);
-    static RunTimeValue clone(std::vector<RunTimeValue> args);
-    static RunTimeValue input(std::vector<RunTimeValue> args);
-    static RunTimeValue getCurrentTimeMillis(std::vector<RunTimeValue> args);
-    static RunTimeValue resizeArray(std::vector<RunTimeValue> args);
-    static RunTimeValue pushBackArray(std::vector<RunTimeValue> args);
-    static RunTimeValue popBackArray(std::vector<RunTimeValue> args);
-    static RunTimeValue pushFirstArray(std::vector<RunTimeValue> args);
-    static RunTimeValue popFirstArray(std::vector<RunTimeValue> args);
-    static RunTimeValue insertIntoArray(std::vector<RunTimeValue> args);
+    static RunTimeValue print(std::vector<RunTimeValue>& args);
+    static RunTimeValue println(std::vector<RunTimeValue>& args);
+    static RunTimeValue toString(std::vector<RunTimeValue>& args);
+    static RunTimeValue numIota(std::vector<RunTimeValue>& args);
+    static RunTimeValue readFileSync(std::vector<RunTimeValue>& args);
+    static RunTimeValue writeFileSync(std::vector<RunTimeValue>& args);
+    static RunTimeValue clone(std::vector<RunTimeValue>& args);
+    static RunTimeValue input(std::vector<RunTimeValue>& args);
+    static RunTimeValue getCurrentTimeMillis(std::vector<RunTimeValue>& args);
+    static RunTimeValue resizeArray(std::vector<RunTimeValue>& args);
+    static RunTimeValue pushBackArray(std::vector<RunTimeValue>& args);
+    static RunTimeValue popBackArray(std::vector<RunTimeValue>& args);
+    static RunTimeValue pushFirstArray(std::vector<RunTimeValue>& args);
+    static RunTimeValue popFirstArray(std::vector<RunTimeValue>& args);
+    static RunTimeValue insertIntoArray(std::vector<RunTimeValue>& args);
     static RunTimeValue copyIfRecommended(RunTimeValue val){
         if(val->type == StructType || val->type == LambdaType || val->type == StringType ||
             val->type == ArrayType)
             return val;
         return val->clone();
+    }
+    static bool shouldICopy(RunTimeValue val){
+        if(val->type == StructType || val->type == LambdaType || val->type == StringType ||
+            val->type == ArrayType)
+            return false;
+        return true;
     }
 };

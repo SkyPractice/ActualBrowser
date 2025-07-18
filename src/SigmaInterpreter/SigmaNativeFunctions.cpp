@@ -12,7 +12,7 @@
 #include <string>
 #include <chrono>
 
-RunTimeValue SigmaInterpreter::println(std::vector<RunTimeValue> args){
+RunTimeValue SigmaInterpreter::println(std::vector<RunTimeValue>& args){
     if(!std::all_of(args.begin(), args.end(), [](RunTimeValue& arg){
         return arg->type == StringType; })) {
         throw std::runtime_error("all the args provided to \'println\' must be of type \'String\'");
@@ -28,7 +28,7 @@ RunTimeValue SigmaInterpreter::println(std::vector<RunTimeValue> args){
                 std::dynamic_pointer_cast<StringVal>(second)->str.size();
         }) + 1);
 };
-RunTimeValue SigmaInterpreter::print(std::vector<RunTimeValue> args){
+RunTimeValue SigmaInterpreter::print(std::vector<RunTimeValue>& args){
     if(!std::all_of(args.begin(), args.end(), [](RunTimeValue& arg){
         return arg->type == StringType; })) {
         throw std::runtime_error("all the args provided to \'println\' must be of type \'String\'");
@@ -44,18 +44,18 @@ RunTimeValue SigmaInterpreter::print(std::vector<RunTimeValue> args){
                 std::dynamic_pointer_cast<StringVal>(second)->str.size();
         }));
 };
-RunTimeValue SigmaInterpreter::toString(std::vector<RunTimeValue> args) {
+RunTimeValue SigmaInterpreter::toString(std::vector<RunTimeValue>& args) {
     if(args.size() > 0){
         return RunTimeFactory::makeString(args[0]->getString());
     } else return RunTimeFactory::makeString("");
 };
 
 // args -> [0] : size, [1] : start
-RunTimeValue SigmaInterpreter::numIota(std::vector<RunTimeValue> args) {
+RunTimeValue SigmaInterpreter::numIota(std::vector<RunTimeValue>& args) {
     return nullptr;
 };
 
-RunTimeValue SigmaInterpreter::readFileSync(std::vector<RunTimeValue> args) {
+RunTimeValue SigmaInterpreter::readFileSync(std::vector<RunTimeValue>& args) {
     if(args[0]->type != StringType) throw
         std::runtime_error("readFileSync Excepts arg 0 to be of type String");
     std::string path = std::dynamic_pointer_cast<StringVal>(args[0])->str;
@@ -70,7 +70,7 @@ RunTimeValue SigmaInterpreter::readFileSync(std::vector<RunTimeValue> args) {
     strea.close();
     return RunTimeFactory::makeString(std::move(strr));
 };
-RunTimeValue SigmaInterpreter::writeFileSync(std::vector<RunTimeValue> args) {
+RunTimeValue SigmaInterpreter::writeFileSync(std::vector<RunTimeValue>& args) {
     if(args[0]->type != StringType || args[0]->type != StringType) throw
         std::runtime_error("writeFileSync Excepts arg 0 and 1 to be of type String");
     std::string path = std::dynamic_pointer_cast<StringVal>(args[0])->str;
@@ -81,17 +81,17 @@ RunTimeValue SigmaInterpreter::writeFileSync(std::vector<RunTimeValue> args) {
     return nullptr;
 };
 
-RunTimeValue SigmaInterpreter::clone(std::vector<RunTimeValue> args) {
+RunTimeValue SigmaInterpreter::clone(std::vector<RunTimeValue>& args) {
     return args[0]->clone();
 };
 
-RunTimeValue SigmaInterpreter::input(std::vector<RunTimeValue> args) {
+RunTimeValue SigmaInterpreter::input(std::vector<RunTimeValue>& args) {
     std::string str;
     std::getline(std::cin, str);
     return RunTimeFactory::makeString(str);
 };
 
-RunTimeValue SigmaInterpreter::getCurrentTimeMillis(std::vector<RunTimeValue> args) {
+RunTimeValue SigmaInterpreter::getCurrentTimeMillis(std::vector<RunTimeValue>& args) {
     std::chrono::time_point tim = std::chrono::high_resolution_clock::now();
     long actual_time = std::chrono::time_point_cast<std::chrono::milliseconds>(
         tim).time_since_epoch().count();
@@ -99,7 +99,7 @@ RunTimeValue SigmaInterpreter::getCurrentTimeMillis(std::vector<RunTimeValue> ar
     return RunTimeFactory::makeNum(actual_time);
 };
 
-RunTimeValue SigmaInterpreter::resizeArray(std::vector<RunTimeValue> args) {
+RunTimeValue SigmaInterpreter::resizeArray(std::vector<RunTimeValue>& args) {
     auto arr = std::dynamic_pointer_cast<ArrayVal>(args[0]);
     auto new_size = static_cast<size_t>(std::dynamic_pointer_cast<NumVal>(args[1])->num);
 
@@ -107,27 +107,27 @@ RunTimeValue SigmaInterpreter::resizeArray(std::vector<RunTimeValue> args) {
     return args[1];
 };
 
-RunTimeValue SigmaInterpreter::pushBackArray(std::vector<RunTimeValue> args){
+RunTimeValue SigmaInterpreter::pushBackArray(std::vector<RunTimeValue>& args){
     auto arr = std::dynamic_pointer_cast<ArrayVal>(args[0]);
     arr->vals.push_back(copyIfRecommended(args[1]));
     return nullptr;
 };
-RunTimeValue SigmaInterpreter::popBackArray(std::vector<RunTimeValue> args){
+RunTimeValue SigmaInterpreter::popBackArray(std::vector<RunTimeValue>& args){
     auto arr = std::dynamic_pointer_cast<ArrayVal>(args[0]);
     arr->vals.pop_back();
     return nullptr;
 };
-RunTimeValue SigmaInterpreter::pushFirstArray(std::vector<RunTimeValue> args){
+RunTimeValue SigmaInterpreter::pushFirstArray(std::vector<RunTimeValue>& args){
     auto arr = std::dynamic_pointer_cast<ArrayVal>(args[0]);
     arr->vals.insert(arr->vals.begin(), copyIfRecommended(args[1]));
     return nullptr;
 };
-RunTimeValue SigmaInterpreter::popFirstArray(std::vector<RunTimeValue> args){
+RunTimeValue SigmaInterpreter::popFirstArray(std::vector<RunTimeValue>& args){
     auto arr = std::dynamic_pointer_cast<ArrayVal>(args[0]);
     arr->vals.erase(arr->vals.begin());
     return nullptr;
 };
-RunTimeValue SigmaInterpreter::insertIntoArray(std::vector<RunTimeValue> args){
+RunTimeValue SigmaInterpreter::insertIntoArray(std::vector<RunTimeValue>& args){
     auto arr = std::dynamic_pointer_cast<ArrayVal>(args[0]);
     size_t index = static_cast<size_t>(std::dynamic_pointer_cast<NumVal>(args[1])->num);
     arr->vals.insert(arr->vals.begin() + index, copyIfRecommended(args[2]));

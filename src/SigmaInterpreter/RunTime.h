@@ -20,6 +20,7 @@ public:
 
     virtual std::shared_ptr<RunTimeVal> clone() = 0;
     virtual ~RunTimeVal() {};
+    virtual void setValue(std::shared_ptr<RunTimeVal> val) {};
     virtual std::string getString() { return ""; };
 };
 
@@ -29,6 +30,10 @@ public:
     NumVal(double number): RunTimeVal(NumType), num(number) {};
 
     std::shared_ptr<RunTimeVal> clone() override;
+
+    void setValue(std::shared_ptr<RunTimeVal> val) override {
+        num = std::dynamic_pointer_cast<NumVal>(val)->num;
+    };
 
     std::string getString() override {
         return std::to_string(num);
@@ -42,6 +47,9 @@ public:
     StringVal(std::string stri): RunTimeVal(StringType), str(std::move(stri)) {};
 
     std::shared_ptr<RunTimeVal> clone() override;
+    void setValue(std::shared_ptr<RunTimeVal> val) override {
+        str = std::dynamic_pointer_cast<StringVal>(val)->str;
+    }
 
     std::string getString() override {
         return "\"" + str + "\"";
@@ -54,6 +62,7 @@ public:
     CharVal(char cha): RunTimeVal(CharType), ch(cha) {};
 
     std::shared_ptr<RunTimeVal> clone() override;
+
 
     std::string getString() override {
         std::string str;
@@ -68,6 +77,9 @@ public:
     BoolVal(bool boolea): RunTimeVal(BoolType), boolean(boolea) {};
 
     std::shared_ptr<RunTimeVal> clone() override;
+    void setValue(std::shared_ptr<RunTimeVal> val) override {
+        boolean = std::dynamic_pointer_cast<BoolVal>(val)->boolean;
+    }
 
     std::string getString() override {
         if(boolean) return "true";
@@ -88,6 +100,12 @@ public:
         captured(captured_vals) {}; 
 
     std::shared_ptr<RunTimeVal> clone() override;
+    void setValue(std::shared_ptr<RunTimeVal> val) override {
+        auto real_val = std::dynamic_pointer_cast<LambdaVal>(val);
+        params = real_val->params;
+        stmts = real_val->stmts;
+        captured = real_val->captured;
+    }
 
     std::string getString() override {
         return "<Lambda>";
@@ -111,7 +129,11 @@ public:
         return str;
     }
 
+    void setValue(std::shared_ptr<RunTimeVal> val) override {
+        vals = std::dynamic_pointer_cast<ArrayVal>(val)->vals;
+    }
     std::shared_ptr<RunTimeVal> clone() override;
+    
 };
 
 class StructVal : public RunTimeVal {
@@ -122,6 +144,10 @@ public:
         RunTimeVal(StructType), vals(std::move(values)) {};
     std::string getString() override {
         return "<struct>";
+    }
+
+    void setValue(std::shared_ptr<RunTimeVal> val) override {
+        vals = std::dynamic_pointer_cast<StructVal>(val)->vals;
     }
 
     std::shared_ptr<RunTimeVal> clone() override;
@@ -153,7 +179,7 @@ public:
 // not copyable, copying will result in shared_from_this()
 class NativeFunctionVal : public RunTimeVal, public std::enable_shared_from_this<NativeFunctionVal> {
 public:
-    using FuncType = std::function<std::shared_ptr<RunTimeVal>(std::vector<std::shared_ptr<RunTimeVal>>)>;    
+    using FuncType = std::function<std::shared_ptr<RunTimeVal>(std::vector<std::shared_ptr<RunTimeVal>>&)>;    
     FuncType func;
 
     NativeFunctionVal(FuncType functio): RunTimeVal(NativeFunctionType), func(std::move(functio)) {};
@@ -164,8 +190,9 @@ public:
 class RefrenceVal : public RunTimeVal {
 public:
     std::shared_ptr<RunTimeVal>* val;
+    std::shared_ptr<RunTimeVal> actual_v;
 
-    RefrenceVal(std::shared_ptr<RunTimeVal>* value): RunTimeVal(RefrenceType), val(value) {};
+    RefrenceVal(std::shared_ptr<RunTimeVal>* value): RunTimeVal(RefrenceType), val(value), actual_v(*value) {};
 
     std::shared_ptr<RunTimeVal> clone() override;
 };

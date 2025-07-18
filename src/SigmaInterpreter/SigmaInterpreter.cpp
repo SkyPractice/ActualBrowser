@@ -253,15 +253,13 @@ RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> pro
     std::unordered_map<std::string, RunTimeValue> obj_vals;
 
     obj_vals.insert({"ref", RunTimeFactory::makeNativeFunction(
-        [this](std::vector<std::shared_ptr<RunTimeVal>> vals) { 
-        return RunTimeFactory::makeRefrence(&current_scope->getVal(
-            std::dynamic_pointer_cast<StringVal>(vals[0])->str
-        ));
+        [this](std::vector<std::shared_ptr<RunTimeVal>>& vals) { 
+        return RunTimeFactory::makeRefrence(&vals[0]);
         }
     )    
     });
     obj_vals.insert({"valByRef", RunTimeFactory::makeNativeFunction(
-        [this](std::vector<std::shared_ptr<RunTimeVal>> vals) { 
+        [this](std::vector<std::shared_ptr<RunTimeVal>>& vals) { 
             return *std::dynamic_pointer_cast<RefrenceVal>(vals[0])->val;
         }
     )    
@@ -321,7 +319,7 @@ RunTimeValue SigmaInterpreter::evaluateBinaryExpression(std::shared_ptr<BinaryEx
 RunTimeValue SigmaInterpreter::evaluateVariableDeclStatement(std::shared_ptr<VariableDecleration> decl) {
     auto val = evaluate(decl->expr);
     if(val->type == ArrayType || val->type == StringType ||
-         val->type == StructType || val->type == LambdaType){
+         val->type == StructType || val->type == LambdaType || val->type == RefrenceType){
         current_scope->declareVar(decl->var_name, { val,
          decl->is_const });
         return nullptr;
@@ -338,36 +336,53 @@ RunTimeValue SigmaInterpreter::evaluateVariableReInitStatement(std::shared_ptr<V
                 current_scope->getVal("this"));
             if(vall->vals.contains(decl->var_name)){
                 auto v = evaluate(decl->expr);
-                if(v->type == ArrayType || v->type == StringType || v->type == StructType ||
-                     v->type == LambdaType){
-                    std::dynamic_pointer_cast<StructVal>(current_scope->getVal("this"))->vals[decl->var_name]
-                        = v;
+                auto stru = std::dynamic_pointer_cast<StructVal>(current_scope->getVal("this"));
+                if(stru->vals[decl->var_name]->type == RefrenceType){
+                    auto actual_ref = std::dynamic_pointer_cast<RefrenceVal>(stru->vals[decl->var_name]);
+                    *actual_ref->val = v;
+                    return nullptr;
                 }
+                if(shouldICopy(v))
+                    stru->vals[decl->var_name]->setValue(v);
                 else {
-                    std::dynamic_pointer_cast<StructVal>(current_scope->getVal("this"))->vals[decl->var_name]
-                        = v->clone();
-                } 
+                    stru->vals[decl->var_name] = v;
+                }
                 return nullptr;
             }
         }
     }
-    auto v = evaluate(decl->expr);
-    if(v->type == ArrayType || v->type == StringType || v->type == StructType || v->type == LambdaType)
-        current_scope->reInitVar(decl->var_name, v);
-    else current_scope->reInitVar(decl->var_name, v->clone());
+    auto ac_v = evaluate(decl->expr);
+    if(current_scope->getVal(decl->var_name)->type == RefrenceType){
+        auto actual_ref = 
+            std::dynamic_pointer_cast<RefrenceVal>(current_scope->getVal(decl->var_name));
+        *actual_ref->val = (ac_v);
+        return nullptr;
+    }
+    if(shouldICopy(current_scope->getVal(decl->var_name))){
+        current_scope->getVal(decl->var_name)->setValue(ac_v);
+        return nullptr;
+    }
+    current_scope->reInitVar(decl->var_name, (ac_v));
     return nullptr;
 };
 
 RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<FunctionCallExpression> expr) {
     
     std::vector<RunTimeValue> args(expr->args.size());
+    std::vector<RunTimeValue*> var_args(expr->args.size());
+    auto func = evaluate(expr->func_expr);
 
+    if(func->type == LambdaType)
     std::transform(expr->args.begin(), expr->args.end(), args.begin(),
         [this](Expr& expr){ 
             auto va = evaluate(expr);
-            if(va->type == StructType || va->type == ArrayType || va->type == StringType)
-                return va;
-            return va->clone();
+            return copyIfRecommended(va);
+        });
+    else if(func->type == NativeFunctionType)
+        std::transform(expr->args.begin(), expr->args.end(), args.begin(),
+        [this](Expr& expr){ 
+            auto va = evaluate(expr);
+            return va;
         });
     // if(expr->func_expr->type == IdentifierExpressionType){
     //     std::string name = std::dynamic_pointer_cast<IdentifierExpression>(expr->func_expr)->str;
@@ -376,7 +391,7 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<Fu
     //         return native_functions[name](args);
     //     }
     // }
-    auto func = evaluate(expr->func_expr);
+    
     if(func->type == NativeFunctionType){
         auto ac_func = std::dynamic_pointer_cast<NativeFunctionVal>(func);
         return ac_func->func(args);
@@ -495,12 +510,20 @@ RunTimeValue SigmaInterpreter::evaluateIndexReInitStatement(std::shared_ptr<Inde
         return nullptr;
     }
     auto latest_val = std::dynamic_pointer_cast<ArrayVal>(val);
-    if(stmt->val->type == IdentifierExpressionType || MemberAccessExpressionType ||
-        IndexAccessExpressionType || FunctionCallExpressionType){
-        latest_val->vals[static_cast<int>(latest_num->num)] = evaluate(stmt->val)->clone();
+    if(latest_val->vals[static_cast<int>(latest_num->num)]->type == RefrenceType){
+        auto v = 
+            std::dynamic_pointer_cast<RefrenceVal>(latest_val->vals[static_cast<int>(latest_num->num)]);
+        *v->val = evaluate(stmt->val);
         return nullptr;
     }
-    latest_val->vals[static_cast<int>(latest_num->num)] = evaluate(stmt->val);
+    auto actual_val = evaluate(stmt->val);
+
+    if(shouldICopy(actual_val))
+        latest_val->vals[static_cast<int>(latest_num->num)]->setValue(actual_val);
+    else {
+        latest_val->vals[static_cast<int>(latest_num->num)] = actual_val;
+    }
+    
     return nullptr;
 };
 
@@ -609,12 +632,17 @@ RunTimeValue SigmaInterpreter::evaluateMemberReInitStatement(
     }
 
     auto latest_val = std::dynamic_pointer_cast<StructVal>(val);
-    if(expr->val->type == IdentifierExpressionType || MemberAccessExpressionType ||
-        IndexAccessExpressionType || FunctionCallExpressionType){
-        latest_val->vals[latest_str] = evaluate(expr->val)->clone();
+    if(latest_val->vals[latest_str]->type == RefrenceType){
+        auto v = std::dynamic_pointer_cast<RefrenceVal>(latest_val->vals[latest_str]);
+        *v->val = evaluate(expr);
         return nullptr;
     }
-    latest_val->vals[latest_str] = evaluate(expr->val);
+    auto actual_v = evaluate(expr->val);
+    if(shouldICopy(actual_v))
+        latest_val->vals[latest_str]->setValue(actual_v);
+    else {
+        latest_val->vals[latest_str] = actual_v;
+    }
     return nullptr;
 };
 
