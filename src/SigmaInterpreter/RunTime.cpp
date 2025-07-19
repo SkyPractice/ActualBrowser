@@ -1,6 +1,8 @@
 #include "RunTime.h"
 #include <algorithm>
+#include <iomanip>
 #include <memory>
+#include <sstream>
 #include <unordered_map>
 
 std::pmr::unsynchronized_pool_resource RunTimeMemory::pool;
@@ -72,3 +74,22 @@ std::shared_ptr<RunTimeVal> BreakVal::clone() { return RunTimeFactory::makeBreak
 std::shared_ptr<RunTimeVal> ContinueVal::clone() { return RunTimeFactory::makeContinue(); };
 std::shared_ptr<RunTimeVal> RefrenceVal::clone() { return RunTimeFactory::makeRefrence(val); };
 std::shared_ptr<RunTimeVal> NativeFunctionVal::clone() { return shared_from_this(); };
+
+std::shared_ptr<BinaryVal> RunTimeFactory::makeBinary(
+    std::vector<unsigned char> d
+) {
+    return makeVal<BinaryVal>(std::move(d));
+};
+
+std::shared_ptr<RunTimeVal> BinaryVal::clone() {
+    return RunTimeFactory::makeBinary(binary_data);
+}
+
+std::string BinaryVal::getString(){
+    std::ostringstream sstrea;
+
+    for(int i = 0; i < binary_data.size(); i++){
+        sstrea << std::hex << std::setw(2) << std::setfill('0') << (int)binary_data[i];
+    }
+    return sstrea.str();
+}

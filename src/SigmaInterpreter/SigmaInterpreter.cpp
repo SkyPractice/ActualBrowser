@@ -276,12 +276,18 @@ RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> pro
     arr_vals.insert({"popFirst", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::popFirstArray)});
     arr_vals.insert({"insert", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::insertIntoArray)});
 
+    std::unordered_map<std::string, RunTimeValue> crypto_vals;
+    crypto_vals.insert({"SHA256", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::Sha256Wrapper)});
+    crypto_vals.insert({"SHA512", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::Sha512Wrapper)});
+    crypto_vals.insert({"AES256", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::Aes256Wrapper)});
+
     current_scope->declareVar("Files", { RunTimeFactory::makeStruct((io_vals)) ,true });
     current_scope->declareVar("Console", { RunTimeFactory::makeStruct((console_vals)) ,true });
     current_scope->declareVar("String", { RunTimeFactory::makeStruct((str_vals)), true });
     current_scope->declareVar("Object", { RunTimeFactory::makeStruct((obj_vals)), true });
     current_scope->declareVar("Time", {RunTimeFactory::makeStruct(tim_vals), true});
     current_scope->declareVar("Array", {RunTimeFactory::makeStruct(arr_vals), true});
+    current_scope->declareVar("Crypto", { RunTimeFactory::makeStruct(crypto_vals), true });
 
     for(auto& stmt : program->stmts){
         evaluate(stmt);

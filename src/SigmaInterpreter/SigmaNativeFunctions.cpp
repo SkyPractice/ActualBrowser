@@ -2,6 +2,7 @@
 #include "SigmaInterpreter.h"
 #include <algorithm>
 #include <cstddef>
+#include <cstring>
 #include <fstream>
 #include <memory>
 #include <numeric>
@@ -11,6 +12,8 @@
 #include <stdexcept>
 #include <string>
 #include <chrono>
+#include "Cryptography.h"
+
 
 RunTimeValue SigmaInterpreter::println(std::vector<RunTimeValue>& args){
     if(!std::all_of(args.begin(), args.end(), [](RunTimeValue& arg){
@@ -132,4 +135,20 @@ RunTimeValue SigmaInterpreter::insertIntoArray(std::vector<RunTimeValue>& args){
     size_t index = static_cast<size_t>(std::dynamic_pointer_cast<NumVal>(args[1])->num);
     arr->vals.insert(arr->vals.begin() + index, copyIfRecommended(args[2]));
     return nullptr;
+};
+RunTimeValue SigmaInterpreter::Sha256Wrapper(std::vector<RunTimeValue>& args) {
+    return RunTimeFactory::makeString(Crypto::Sha256(std::dynamic_pointer_cast<StringVal>(args[0])->str));
+};
+
+RunTimeValue SigmaInterpreter::Sha512Wrapper(std::vector<RunTimeValue>& args) {
+    return RunTimeFactory::makeString(Crypto::Sha512(std::dynamic_pointer_cast<StringVal>(args[0])->str));
+};
+RunTimeValue SigmaInterpreter::Aes256Wrapper(std::vector<RunTimeValue>& args) {
+    AesResult res = Crypto::Aes256(std::dynamic_pointer_cast<StringVal>(args[0])->str);
+    std::vector<unsigned char> key(32);
+    memcpy(key.data(), res.key, 32);
+    return RunTimeFactory::makeStruct(
+        { {"cipher", RunTimeFactory::makeString(res.cipher)},
+                    {"key", RunTimeFactory::makeBinary(key)}}
+    );
 };

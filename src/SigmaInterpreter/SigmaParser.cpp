@@ -87,17 +87,7 @@ Stmt SigmaParser::parseVarReInitStmt() {
 
 Expr SigmaParser::parseExpr() { 
     auto expr = parseAddExpr();
-    while (itr->type == OpenBracket || itr->type == Dot || itr->type == OpenParen){
-        if(itr->type == OpenBracket){
-            expr = parseIndexExpr(expr);
-        }
-        else if(itr->type == Dot){
-            expr = parseMemberAccessExpr(expr);
-        }
-        else if (itr->type == OpenParen){
-            expr = parseFunctionCall(expr);
-        }
-    }
+
 
     return expr;
 };
@@ -134,11 +124,34 @@ Expr SigmaParser::parseCompExpr() {
 };
 Expr SigmaParser::parseBitWiseExpr() {
     Expr left = parsePrimaryExpr();
+    while (itr->type == OpenBracket || itr->type == Dot || itr->type == OpenParen){
+        if(itr->type == OpenBracket){
+            left = parseIndexExpr(left);
+        }
+        else if(itr->type == Dot){
+            left = parseMemberAccessExpr(left);
+        }
+        else if (itr->type == OpenParen){
+            left = parseFunctionCall(left);
+        }
+    }
 
     while(itr->symbol == "&" || itr->symbol == "|" || itr->symbol == "<<" ||
         itr->symbol == ">>" || itr->symbol == "^"){
         std::string op = advance().symbol;
-        left = std::make_shared<BinaryExpression>(left, parsePrimaryExpr(), op);
+        auto r = parsePrimaryExpr();
+        while (itr->type == OpenBracket || itr->type == Dot || itr->type == OpenParen){
+            if(itr->type == OpenBracket){
+                r = parseIndexExpr(r);
+            }
+            else if(itr->type == Dot){
+                r = parseMemberAccessExpr(r);
+            }
+            else if (itr->type == OpenParen){
+                r = parseFunctionCall(r);
+            }
+    }
+        left = std::make_shared<BinaryExpression>(left, r, op);
     }
 
     return left;

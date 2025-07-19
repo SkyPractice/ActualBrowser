@@ -10,7 +10,7 @@
 
 enum RunTimeValType {
     NumType, StringType, CharType, BoolType, LambdaType, ArrayType, StructType, ReturnType,
-    BreakType, ContinueType, NativeFunctionType, RefrenceType
+    BreakType, ContinueType, NativeFunctionType, RefrenceType, BinaryType
 };
 
 class RunTimeVal {
@@ -197,6 +197,15 @@ public:
     std::shared_ptr<RunTimeVal> clone() override;
 };
 
+class BinaryVal : public RunTimeVal {
+public:
+    std::vector<unsigned char> binary_data;
+
+    BinaryVal(std::vector<unsigned char> d): RunTimeVal(BinaryType), binary_data(d) {};
+    std::shared_ptr<RunTimeVal> clone() override;
+    std::string getString() override;
+};
+
 class RunTimeMemory {
 public:
     static std::pmr::unsynchronized_pool_resource pool;
@@ -230,5 +239,8 @@ public:
     );
     static std::shared_ptr<RefrenceVal> makeRefrence(
         std::shared_ptr<RunTimeVal>* val
+    );
+    static std::shared_ptr<BinaryVal> makeBinary(
+        std::vector<unsigned char> d
     );
 };

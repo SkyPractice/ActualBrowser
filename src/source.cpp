@@ -5,6 +5,8 @@
 #include <gtkmm/application.h>
 
 int main(int argc, char** argv){
+    ERR_load_crypto_strings();
+    OpenSSL_add_all_algorithms();
     net::io_context io_ctx;
     ssl::context ssl_ctx(ssl::context::tls_client);
     tcp::resolver resolver(io_ctx);
@@ -16,4 +18,6 @@ int main(int argc, char** argv){
     auto app = Gtk::Application::create("org.gtkmm.example");
 
     return app->make_window_and_run<BrowserWindow>(argc, argv, man);
+    EVP_cleanup();
+    ERR_free_strings();
 }

@@ -137,4 +137,10 @@ public:
             return false;
         return true;
     }
+
+
+    // Crypto wrappers
+    static RunTimeValue Sha256Wrapper(std::vector<RunTimeValue>& args);
+    static RunTimeValue Sha512Wrapper(std::vector<RunTimeValue>& args);
+    static RunTimeValue Aes256Wrapper(std::vector<RunTimeValue>& args);
 };
