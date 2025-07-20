@@ -246,6 +246,8 @@ RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> pro
     std::unordered_map<std::string, RunTimeValue> io_vals;
     io_vals.insert({"readFileSync", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::readFileSync)});
     io_vals.insert({"writeFileSync", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::writeFileSync)});
+    io_vals.insert({"readBinaryFileSync", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::readBinaryFileSync)});
+    io_vals.insert({"writeBinaryFileSync", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::writeBinaryFileSync)});
     
     std::unordered_map<std::string, RunTimeValue> str_vals;
     str_vals.insert({"valueOf", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::toString)});
@@ -279,7 +281,9 @@ RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> pro
     std::unordered_map<std::string, RunTimeValue> crypto_vals;
     crypto_vals.insert({"SHA256", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::Sha256Wrapper)});
     crypto_vals.insert({"SHA512", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::Sha512Wrapper)});
-    crypto_vals.insert({"AES256", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::Aes256Wrapper)});
+    crypto_vals.insert({"AES256Encrypt", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::Aes256Wrapper)});
+    crypto_vals.insert({"AES256Decrypt", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::Aes256DecryptWrapper)});
+    crypto_vals.insert({"AES256GenKey", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::Aes256GenKeyWrapper)});
 
     current_scope->declareVar("Files", { RunTimeFactory::makeStruct((io_vals)) ,true });
     current_scope->declareVar("Console", { RunTimeFactory::makeStruct((console_vals)) ,true });

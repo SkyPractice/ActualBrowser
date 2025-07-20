@@ -116,6 +116,8 @@ public:
     static RunTimeValue numIota(std::vector<RunTimeValue>& args);
     static RunTimeValue readFileSync(std::vector<RunTimeValue>& args);
     static RunTimeValue writeFileSync(std::vector<RunTimeValue>& args);
+    static RunTimeValue writeBinaryFileSync(std::vector<RunTimeValue>& args);
+    static RunTimeValue readBinaryFileSync(std::vector<RunTimeValue>& args);
     static RunTimeValue clone(std::vector<RunTimeValue>& args);
     static RunTimeValue input(std::vector<RunTimeValue>& args);
     static RunTimeValue getCurrentTimeMillis(std::vector<RunTimeValue>& args);
@@ -127,13 +129,13 @@ public:
     static RunTimeValue insertIntoArray(std::vector<RunTimeValue>& args);
     static RunTimeValue copyIfRecommended(RunTimeValue val){
         if(val->type == StructType || val->type == LambdaType || val->type == StringType ||
-            val->type == ArrayType)
+            val->type == ArrayType || val->type == BinaryType || val->type == NativeFunctionType)
             return val;
         return val->clone();
     }
     static bool shouldICopy(RunTimeValue val){
         if(val->type == StructType || val->type == LambdaType || val->type == StringType ||
-            val->type == ArrayType)
+            val->type == ArrayType || val->type == BinaryType || val->type == NativeFunctionType)
             return false;
         return true;
     }
@@ -143,4 +145,7 @@ public:
     static RunTimeValue Sha256Wrapper(std::vector<RunTimeValue>& args);
     static RunTimeValue Sha512Wrapper(std::vector<RunTimeValue>& args);
     static RunTimeValue Aes256Wrapper(std::vector<RunTimeValue>& args);
+    static RunTimeValue Aes256DecryptWrapper(std::vector<RunTimeValue>& args);
+
+    static RunTimeValue Aes256GenKeyWrapper(std::vector<RunTimeValue>& args);
 };

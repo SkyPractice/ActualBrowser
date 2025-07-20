@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <string>
 #include <chrono>
+#include <vector>
 #include "Cryptography.h"
 
 
@@ -84,6 +85,28 @@ RunTimeValue SigmaInterpreter::writeFileSync(std::vector<RunTimeValue>& args) {
     return nullptr;
 };
 
+RunTimeValue SigmaInterpreter::writeBinaryFileSync(std::vector<RunTimeValue>& args){
+    std::string path = std::dynamic_pointer_cast<StringVal>(args[0])->str;
+    std::vector<unsigned char> val = std::dynamic_pointer_cast<BinaryVal>(args[1])->binary_data;
+    std::ofstream strea(path, std::ios::binary);
+    size_t siz = val.size();
+    strea.write(reinterpret_cast<const char*>(&siz), sizeof(size_t));
+    strea.write(reinterpret_cast<const char*>(&val[0]), val.size());
+    strea.close();
+    return nullptr;
+};
+RunTimeValue SigmaInterpreter::readBinaryFileSync(std::vector<RunTimeValue>& args){
+    std::string path = std::dynamic_pointer_cast<StringVal>(args[0])->str;
+    std::vector<unsigned char> val;
+    size_t siz = 0;
+    std::ifstream strea(path, std::ios::binary);
+    strea.read(reinterpret_cast<char*>(&siz), sizeof(size_t));
+    val.resize(siz);
+    strea.read(reinterpret_cast<char*>(&val[0]), siz);
+    strea.close();
+    return RunTimeFactory::makeBinary(val);
+};
+
 RunTimeValue SigmaInterpreter::clone(std::vector<RunTimeValue>& args) {
     return args[0]->clone();
 };
@@ -144,11 +167,17 @@ RunTimeValue SigmaInterpreter::Sha512Wrapper(std::vector<RunTimeValue>& args) {
     return RunTimeFactory::makeString(Crypto::Sha512(std::dynamic_pointer_cast<StringVal>(args[0])->str));
 };
 RunTimeValue SigmaInterpreter::Aes256Wrapper(std::vector<RunTimeValue>& args) {
-    AesResult res = Crypto::Aes256(std::dynamic_pointer_cast<StringVal>(args[0])->str);
-    std::vector<unsigned char> key(32);
-    memcpy(key.data(), res.key, 32);
-    return RunTimeFactory::makeStruct(
-        { {"cipher", RunTimeFactory::makeString(res.cipher)},
-                    {"key", RunTimeFactory::makeBinary(key)}}
-    );
+    std::vector<unsigned char> res = Crypto::Aes256(std::dynamic_pointer_cast<StringVal>(args[0])->str,
+        std::dynamic_pointer_cast<BinaryVal>(args[1])->binary_data);
+    return RunTimeFactory::makeBinary(res);
+};
+
+RunTimeValue SigmaInterpreter::Aes256GenKeyWrapper(std::vector<RunTimeValue>& args) {
+    return RunTimeFactory::makeBinary(Crypto::genAes256Key());
+};
+
+RunTimeValue SigmaInterpreter::Aes256DecryptWrapper(std::vector<RunTimeValue>& args) {
+    return RunTimeFactory::makeString(Crypto::decryptAes256(
+        std::dynamic_pointer_cast<BinaryVal>(args[0])->binary_data,
+         std::dynamic_pointer_cast<BinaryVal>(args[1])->binary_data));
 };
