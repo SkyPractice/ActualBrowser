@@ -7,10 +7,11 @@
 #include "SigmaAst.h"
 #include <unordered_map>
 #include <memory_resource>
+#include "../Interpreter/Ast.h"
 
 enum RunTimeValType {
     NumType, StringType, CharType, BoolType, LambdaType, ArrayType, StructType, ReturnType,
-    BreakType, ContinueType, NativeFunctionType, RefrenceType, BinaryType
+    BreakType, ContinueType, NativeFunctionType, RefrenceType, BinaryType, HtmlType
 };
 
 class RunTimeVal {
@@ -206,6 +207,14 @@ public:
     std::string getString() override;
 };
 
+class HtmlElementVal : public RunTimeVal {
+public:
+    std::shared_ptr<HTMLTag> target_tag;
+
+    HtmlElementVal(std::shared_ptr<HTMLTag> tagg): RunTimeVal(HtmlType), target_tag(tagg) {}; 
+    std::shared_ptr<RunTimeVal> clone() override { return {}; };
+};
+
 class RunTimeMemory {
 public:
     static std::pmr::unsynchronized_pool_resource pool;
@@ -243,4 +252,5 @@ public:
     static std::shared_ptr<BinaryVal> makeBinary(
         std::vector<unsigned char> d
     );
+    static std::shared_ptr<HtmlElementVal> makeHtmlElement(std::shared_ptr<HTMLTag> tag);
 };

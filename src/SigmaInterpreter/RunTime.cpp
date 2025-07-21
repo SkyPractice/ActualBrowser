@@ -93,3 +93,7 @@ std::string BinaryVal::getString(){
     }
     return sstrea.str();
 }
+
+std::shared_ptr<HtmlElementVal> RunTimeFactory::makeHtmlElement(std::shared_ptr<HTMLTag> tag) {
+    return makeVal<HtmlElementVal>(tag);
+};

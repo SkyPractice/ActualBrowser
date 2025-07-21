@@ -1,5 +1,6 @@
 #pragma once
 #include "Ast.h"
+#include "Parser.h"
 #include <fstream>
 #include <gdkmm/display.h>
 #include <glibmm/refptr.h>
@@ -12,6 +13,7 @@
 #include "../SigmaInterpreter/SigmaLexer.h"
 #include "../SigmaInterpreter/SigmaParser.h"
 #include "../SigmaInterpreter/SigmaInterpreter.h"
+#include <iostream>
 
 namespace fs = std::filesystem;
 
@@ -20,8 +22,11 @@ public:
     SigmaLexer scripting_lexer;
     SigmaParser scripting_parser;
     SigmaInterpreter scripting_interpreter;
+    Lexer lexer;
+    Parser parser;
 
     std::vector<Glib::RefPtr<Gtk::CssProvider>> css_providers;
+
     void renderTags(Gtk::Box* target_box, Program tags) {
         for(auto& tag : tags.html_tags){
             tag->render(target_box);

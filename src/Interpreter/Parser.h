@@ -1,21 +1,21 @@
 #pragma once
 #include "Ast.h"
 #include "Lexer.h"
-#include <exception>
 #include <memory>
-#include <stdexcept>
 #include <unordered_map>
 
 using Tag = std::shared_ptr<HTMLTag>;
 
 class Parser {
 public:
+    std::string current_p_tag_cl_name = "body";
+
     Tag parseDocumentHtmlTag();
 
     Tag parseBodyTag();
     Tag parseHTag(TokenType type);
     Tag parsePTag();
-    Tag parseString();
+    Tag parseString(std::string p_class_name = "p");
     Tag parseImageTag();
     Tag parseInputTag();
     Tag parseButtonTag();

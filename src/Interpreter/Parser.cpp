@@ -5,9 +5,6 @@
 #include <stdexcept>
 #include <unordered_map>
 #include <iostream>
-#include <filesystem>
-
-namespace fs = std::filesystem;
 
 std::shared_ptr<HTMLTag> Parser::parseHtmlTag() {
   switch (itr->type) {
@@ -44,7 +41,7 @@ std::shared_ptr<HTMLTag> Parser::parseHtmlTag() {
 
 Tag Parser::parseDocumentHtmlTag(){
     const Token html_tok = advance();
-    const auto tag = std::make_shared<HTMLTag>(Html);
+    const auto tag = std::make_shared<HTMLTag>(Html, "html", "html");
     tag->props = parseProps();
 
     while(itr->type != CLOSEHTML){
@@ -152,7 +149,7 @@ Tag Parser::parsePTag(){
     
 };
 
-Tag Parser::parseString(){
+Tag Parser::parseString(std::string p_class_name){
     const Token str = advance();
 
     return std::make_shared<StringTag>(str.symbol);

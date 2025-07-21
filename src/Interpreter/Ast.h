@@ -1,5 +1,4 @@
 #pragma once
-#include "Lexer.h"
 #include <glibmm/refptr.h>
 #include <gtk/gtk.h>
 #include <gtkmm/cssprovider.h>
@@ -13,8 +12,6 @@
 #include <vector>
 #include <gtkmm/box.h>
 #include <gtkmm/label.h>
-#include <filesystem>
-#include <iostream>
 #include <gtkmm/button.h>
 #include <glibmm/refptr.h>
 #include <uuid/uuid.h>
@@ -24,28 +21,26 @@ enum TagType {
 };
 
 
-class HTMLTag : public std::enable_shared_from_this<HTMLTag>{
+class HTMLTag : public std::enable_shared_from_this<HTMLTag> {
 public:
     TagType type;
     std::vector<std::shared_ptr<HTMLTag>> children;
     std::unordered_map<std::string, std::string> props;
     Glib::RefPtr<Gtk::CssProvider> css_provider;
 
-    HTMLTag(TagType t): type(t) {};
+    std::string html_elm_name;
+    std::string elm_name;
 
-    virtual void render(Gtk::Box* box) {
-        for(auto& child : children){
-            child->render(box);
-        }
-    }
+    HTMLTag(TagType t, std::string html_element_name, std::string element_name): type(t),
+        html_elm_name(html_element_name), elm_name(element_name){};
+    
+    virtual void render(Gtk::Box* box);
+    void flatten(std::vector<std::shared_ptr<HTMLTag>>& tags);
+    virtual void setChildren(std::vector<std::shared_ptr<HTMLTag>> tags);
+    virtual std::vector<std::string> getClassNames();
 
-    void flatten(std::vector<std::shared_ptr<HTMLTag>>& tags){
-        tags.push_back(shared_from_this());
-
-        for(auto& child : children){
-            child->flatten(tags);
-        }
-    }
+    virtual void applyCssClasses() {};
+    virtual void applyStyle() {};
 };
 
 class Program {
@@ -55,295 +50,127 @@ public:
     std::vector<std::string> script_srcs;
 };
 
-class BodyTag : public HTMLTag {
+class ContainerTag : public HTMLTag {
 public:
-    BodyTag(): HTMLTag(Body) {};
-    Gtk::Box* bxx;
+    ContainerTag(TagType type, std::string html_element_name,
+        std::string element_name): HTMLTag(type, html_element_name, element_name) {};
+    Gtk::Box* container_box = nullptr;
 
-    void render(Gtk::Box* bx) override {
-        bxx = Gtk::manage(new Gtk::Box(Gtk::Orientation::VERTICAL));
-        bx->append(*bxx);
-        if(props.contains("class")) bxx->add_css_class(props["class"]);
-        if(props.contains("style")){
-            css_provider = Gtk::CssProvider::create();
-            css_provider->load_from_data("box {" + props["style"] + "}");
-            bxx->get_style_context()->add_provider(css_provider,
-                 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-        }
-        bxx->add_css_class("body");
-        for(auto& child : children){
-            child->render(bxx);
-        }
-    };
+    void applyCssClasses() override;
+    void applyStyle() override;
+    void render(Gtk::Box* parent_box) override;
+    
 };
 
-class DivTag : public HTMLTag {
+class BodyTag : public ContainerTag {
 public:
-    DivTag(): HTMLTag(Div) {};
-    Gtk::Box* bxx;
-
-    void render(Gtk::Box* bx) override {
-        bxx = Gtk::manage(new Gtk::Box(Gtk::Orientation::VERTICAL));
-        bxx->set_hexpand(true);
-        bxx->set_valign(Gtk::Align::START);
-        bxx->set_halign(Gtk::Align::START);
-        bx->append(*bxx);
-        if(props.contains("class")) bxx->add_css_class(props["class"]);
-        if(props.contains("style")){
-            css_provider = Gtk::CssProvider::create();
-            css_provider->load_from_data("box {" + props["style"] + "}");
-            bxx->get_style_context()->add_provider(css_provider,
-                 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-        }
-        bxx->add_css_class("div");
-        for(auto& child : children){
-            child->render(bxx);
-        }
-    };
+    BodyTag(): ContainerTag(Body, "body", "box") {};
 };
 
-class HeadTag : public HTMLTag {
+class DivTag : public ContainerTag {
 public:
-    HeadTag(): HTMLTag(Head) {};
-
-    void render(Gtk::Box* box)  override {
-    };
+    DivTag(): ContainerTag(Div, "div", "box") {};
 };
 
+class HeadTag : public ContainerTag {
+public:
+    HeadTag(): ContainerTag(Head, "head", "box") {};
+};
 
 class StringTag : public HTMLTag {
 public:
     std::string str;
-    StringTag(std::string stringg): HTMLTag(String), str(stringg) {};
+    std::string parent_class_name;
+    StringTag(std::string stringg, std::string p_class_name = "none"):
+        HTMLTag(String, "String", "label"), str(stringg), parent_class_name(p_class_name) {};
     Gtk::Label* lab;
 
-    void render(Gtk::Box* targ_box)  override {
-        Gtk::Label* lab = new Gtk::Label(str);
-
-        lab->set_hexpand(true);
-        lab->set_valign(Gtk::Align::START);
-        lab->set_halign(Gtk::Align::START);
-        lab->add_css_class("p");
-        targ_box->append(*lab);
-    }
-    void renderText(TagType class_type, Gtk::Box* targ_box){
-
-        lab = Gtk::manage(new Gtk::Label(str));
-        if(class_type == h1)
-            lab->add_css_class("h1");
-        if(class_type == h2)
-            lab->add_css_class("h2");
-        if(class_type == h3)
-            lab->add_css_class("h3");
-        if(class_type == h4)
-            lab->add_css_class("h4");
-        if(class_type == h5)
-            lab->add_css_class("h5");
-        if(class_type == p)
-            lab->add_css_class("p");
-        
-        lab->set_hexpand(true);
-        lab->set_valign(Gtk::Align::START);
-        lab->set_halign(Gtk::Align::START);
-        if(props.contains("class")) lab->add_css_class(props["class"]);
-        if(props.contains("style")){
-            css_provider = Gtk::CssProvider::create();
-            css_provider->load_from_data("label {" + props["style"] + "}");
-            lab->get_style_context()->add_provider(css_provider,
-                 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-        }
-        if(props.contains("width")){
-            lab->set_max_width_chars(std::stoi(props["width"]));
-        }
-        lab->set_wrap();
-        lab->set_natural_wrap_mode(Gtk::NaturalWrapMode::WORD);
-        targ_box->append(*lab);
-    }
+    void applyCssClasses() override;
+    void applyStyle() override;
+    void render(Gtk::Box* targ_box) override;
 };
 
-
-class H1Tag : public HTMLTag {
+class TextTag : public HTMLTag {
 public:
-    H1Tag(): HTMLTag(h1) {};
+    TextTag(TagType type, std::string html_element_name,
+        std::string element_name): HTMLTag(type, html_element_name, element_name) {};
 
-    void render(Gtk::Box* box)  override {
-        for(auto& child : children){
-            if(child->type == String){
-                auto real_child = std::dynamic_pointer_cast<StringTag>(child);
-                if(props.contains("class")) real_child->props["class"] = props["class"]; 
-                if(props.contains("style")) real_child->props["style"] = props["style"];
-                if(props.contains("width")) real_child->props["width"] = props["width"];
-                real_child->renderText(h1, box);
-            }
-        }
-    }
+    void render(Gtk::Box* parent_box) override;
 };
 
-class H2Tag : public HTMLTag {
+class H1Tag : public TextTag {
 public:
-    H2Tag(): HTMLTag(h2) {};
-
-    void render(Gtk::Box* box)  override {
-        for(auto& child : children){
-            if(child->type == String){
-                auto real_child = std::dynamic_pointer_cast<StringTag>(child);
-                if(props.contains("class")) real_child->props["class"] = props["class"]; 
-                if(props.contains("style")) real_child->props["style"] = props["style"];
-                if(props.contains("width")) real_child->props["width"] = props["width"];
-                real_child->renderText(h2, box);
-            }
-        }
-    }
+    H1Tag(): TextTag(h1, "h1", "label") {};
 };
 
-class H3Tag : public HTMLTag {
+class H2Tag : public TextTag {
 public:
-    H3Tag(): HTMLTag(h3) {};
+    H2Tag(): TextTag(h2, "h2", "label") {};
 
-    void render(Gtk::Box* box)  override {
-        for(auto& child : children){
-            if(child->type == String){
-                auto real_child = std::dynamic_pointer_cast<StringTag>(child);
-                if(props.contains("class")) real_child->props["class"] = props["class"];
-                if(props.contains("style")) real_child->props["style"] = props["style"];
-                if(props.contains("width")) real_child->props["width"] = props["width"];
-                real_child->renderText(h3, box);
-            }
-        }
-    }
 };
 
-class H4Tag : public HTMLTag {
+class H3Tag : public TextTag {
 public:
-    H4Tag(): HTMLTag(h4) {};
-
-    void render(Gtk::Box* box)  override {
-        for(auto& child : children){
-            if(child->type == String){
-                auto real_child = std::dynamic_pointer_cast<StringTag>(child);
-                if(props.contains("class")) real_child->props["class"] = props["class"]; 
-                if(props.contains("style")) real_child->props["style"] = props["style"];
-                if(props.contains("width")) real_child->props["width"] = props["width"];
-                real_child->renderText(h4, box);
-            }
-        }
-    }
+    H3Tag(): TextTag(h3, "h3", "label") {};
 };
 
-class H5Tag : public HTMLTag {
+class H4Tag : public TextTag {
 public:
-    H5Tag(): HTMLTag(h5) {};
+    H4Tag(): TextTag(h4, "h4", "label") {};
+};
 
-    void render(Gtk::Box* box)  override {
-        for(auto& child : children){
-            if(child->type == String){
-                auto real_child = std::dynamic_pointer_cast<StringTag>(child);
-                if(props.contains("class")) real_child->props["class"] = props["class"];
-                if(props.contains("style")) real_child->props["style"] = props["style"];
-                if(props.contains("width")) real_child->props["width"] = props["width"];
-                real_child->renderText(h5, box);
-            }
-        }
-    }
+class H5Tag : public TextTag {
+public:
+    H5Tag(): TextTag(h5, "h5", "label") {};
 };
 
 
 class PTag : public HTMLTag {
 public:
-    PTag(): HTMLTag(p) {};
-
-    void render(Gtk::Box* box) override {
-        for(auto& child : children){
-            if(child->type == String){
-                auto real_child = std::dynamic_pointer_cast<StringTag>(child);
-                if(props.contains("class")) real_child->props["class"] = props["class"]; 
-                if(props.contains("style")) real_child->props["style"] = props["style"];
-                if(props.contains("width")) real_child->props["width"] = props["width"];
-                real_child->renderText(p, box);
-            }
-        }
-    }
+    PTag(): HTMLTag(p, "p", "label") {};
 };
 
 class ImageTag : public HTMLTag {
 public:
-    ImageTag(): HTMLTag(Image) {};
+    ImageTag(): HTMLTag(Image, "img", "image") {};
     Gtk::Image* image;
 
-    void render(Gtk::Box* box) override {
-        if(props.contains("src")){
-            if(std::filesystem::exists(props["src"])){
-                image = Gtk::manage(new Gtk::Image(props["src"]));
-                image->set_halign(Gtk::Align::START);
-                image->set_hexpand(false);
-                image->add_css_class("img");
-                if (props.contains("class"))
-                  image->add_css_class(props["class"]);
-                if (props.contains("style")) {
-                  css_provider = Gtk::CssProvider::create();
-                  css_provider->load_from_data("image {" + props["style"] +
-                                               "}");
-                  image->get_style_context()->add_provider(
-                      css_provider, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-                }
-                box->append(*image);
-            }
-        }
-    }
+    void applyCssClasses() override;
+    void applyStyle() override;
+    void render(Gtk::Box* box) override;
 
 };
 
 class InputTag : public HTMLTag {
 public:
-    InputTag(): HTMLTag(Input){};
+    InputTag(): HTMLTag(Input, "input", "input"){};
     Gtk::Entry* input;
-    void render(Gtk::Box* box) override {
-        input = Gtk::manage(new Gtk::Entry);
-        input->add_css_class("input");
-        if(props.contains("class")) input->add_css_class(props["class"]); 
-        input->set_halign(Gtk::Align::START);
-        input->set_hexpand(false);
-                if(props.contains("style")){
-            css_provider = Gtk::CssProvider::create();
-            css_provider->load_from_data("entry {" + props["style"] + "}");
-            input->get_style_context()->add_provider(css_provider,
-                 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-        }
-        box->append(*input);
-    }
+
+    void applyCssClasses() override;
+    void applyStyle() override;
+    void render(Gtk::Box* box) override;
 };
 
 
 class ButtonTag : public HTMLTag {
 public:
-    ButtonTag(): HTMLTag(Button) {};
+    ButtonTag(): HTMLTag(Button, "button", "button") {};
     Gtk::Button* button;
     std::string str;
     
-    void render(Gtk::Box* box) override {
-        button = Gtk::manage(new Gtk::Button(str));
-        button->set_halign(Gtk::Align::START);
-        button->set_hexpand(false);
-        button->add_css_class("button");
-        if(props.contains("class")) button->add_css_class(props["class"]); 
-        if(props.contains("style")){
-            css_provider = Gtk::CssProvider::create();
-            css_provider->load_from_data("button {" + props["style"] + "}");
-            button->get_style_context()->add_provider(css_provider,
-                 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-        }
-        box->append(*button);
-    }
+    void applyCssClasses() override;
+    void applyStyle() override;
+    void render(Gtk::Box* box) override;
 };
 
 class StyleTag : public HTMLTag{
 public:
-    StyleTag(): HTMLTag(Stylee) {};
+    StyleTag(): HTMLTag(Stylee, "style", "") {};
     std::string src;
 };
 
 class ScriptTag : public HTMLTag {
 public:
-    ScriptTag(): HTMLTag(Scriptt) {};
+    ScriptTag(): HTMLTag(Scriptt, "script", "") {};
     std::string src;
 };
