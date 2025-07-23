@@ -132,9 +132,11 @@ public:
     RunTimeValue pushFirstArray(std::vector<RunTimeValue>& args);
     RunTimeValue popFirstArray(std::vector<RunTimeValue>& args);
     RunTimeValue insertIntoArray(std::vector<RunTimeValue>& args);
+    RunTimeValue arraySize(std::vector<RunTimeValue>& args);
     
     RunTimeValue getElementById(std::vector<RunTimeValue>& args);
     RunTimeValue setElementInnerHtml(std::vector<RunTimeValue>& args);
+    RunTimeValue getElementsByClassName(std::vector<RunTimeValue>& args);
 
     static RunTimeValue copyIfRecommended(RunTimeValue val){
         if(val->type == StructType || val->type == LambdaType || val->type == StringType ||

@@ -205,3 +205,20 @@ RunTimeValue SigmaInterpreter::setElementInnerHtml(std::vector<RunTimeValue>& ar
     accessor->current_interp->refreshIdsAndClasses();
     return nullptr;
 };
+
+RunTimeValue SigmaInterpreter::getElementsByClassName(std::vector<RunTimeValue>& args) {
+    std::string cl = std::dynamic_pointer_cast<StringVal>(args[0])->str;
+    auto elms = accessor->class_name_ptrs.equal_range(cl);
+    auto [beg_itr, end_itr] = elms;
+
+    std::vector<RunTimeValue> results;
+    for(auto itr = beg_itr; itr != end_itr; itr++){
+        results.push_back(RunTimeFactory::makeHtmlElement(itr->second));
+    }
+
+    return RunTimeFactory::makeArray(results);
+};
+
+RunTimeValue SigmaInterpreter::arraySize(std::vector<RunTimeValue>& args) {
+    return RunTimeFactory::makeNum(std::dynamic_pointer_cast<ArrayVal>(args[0])->vals.size());
+};

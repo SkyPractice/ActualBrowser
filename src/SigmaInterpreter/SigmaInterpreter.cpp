@@ -279,6 +279,7 @@ RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> pro
     arr_vals.insert({"pushFirst", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::pushFirstArray, this, std::placeholders::_1))});
     arr_vals.insert({"popFirst", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::popFirstArray, this, std::placeholders::_1))});
     arr_vals.insert({"insert", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::insertIntoArray, this, std::placeholders::_1))});
+    arr_vals.insert({"getSize", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::arraySize, this, std::placeholders::_1))});
 
     std::unordered_map<std::string, RunTimeValue> crypto_vals;
     crypto_vals.insert({"SHA256", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::Sha256Wrapper)});
@@ -289,6 +290,7 @@ RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> pro
 
     std::unordered_map<std::string, RunTimeValue> dom_vals;
     dom_vals.insert({"getElementById", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::getElementById, this, std::placeholders::_1))});
+    dom_vals.insert({"getElementsByClassName", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::getElementsByClassName, this, std::placeholders::_1))});
     dom_vals.insert({"setInnerHtml", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::setElementInnerHtml, this, std::placeholders::_1))});
 
 
