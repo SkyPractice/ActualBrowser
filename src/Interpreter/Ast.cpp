@@ -1,7 +1,10 @@
 #include "Ast.h"
+#include <gtkmm/box.h>
 #include <gtkmm/enums.h>
 #include <format>
 #include <filesystem>
+#include <gtkmm/image.h>
+#include <gtkmm/object.h>
 #include <iostream>
 #include "../HttpManager/HttpManager.h"
 
@@ -88,7 +91,8 @@ void StringTag::render(Gtk::Box* targ_box) {
     parent_widget = targ_box;
     current_widget = lab;
     lab->add_css_class(parent_class_name);
-    lab->set_hexpand(true);
+    lab->set_hexpand(false);
+    lab->set_vexpand(false);
     lab->set_valign(Gtk::Align::START);
     lab->set_halign(Gtk::Align::START);
     applyCssClasses();
@@ -102,6 +106,13 @@ void StringTag::render(Gtk::Box* targ_box) {
 };
 
 void TextTag::render(Gtk::Box* parent_box){
+    parent_widget = parent_box;
+    box = Gtk::manage(new Gtk::Box(Gtk::Orientation::HORIZONTAL));
+    box->set_hexpand(false);
+    box->set_vexpand(false);
+    box->set_valign(Gtk::Align::START);
+    box->set_halign(Gtk::Align::START);
+    parent_box->append(*box);
     for(auto& child : children){
         if(child->type == String){
             auto real_child = std::dynamic_pointer_cast<StringTag>(child);
@@ -109,7 +120,11 @@ void TextTag::render(Gtk::Box* parent_box){
             if(props.contains("style")) real_child->props["style"] = props["style"];
             if(props.contains("width")) real_child->props["width"] = props["width"];
             real_child->parent_class_name = html_elm_name;
-            real_child->render(parent_box);
+            real_child->render(box);
+        } else {
+
+            child->props["class"] = child->props["class"] + " " + html_elm_name;
+            child->render(box);
         }
     }
 };
@@ -130,19 +145,26 @@ void ImageTag::applyStyle() {
 };
 void ImageTag::render(Gtk::Box* box) {
     parent_widget = box;
-    if(props.contains("src")){
-        const std::string pathh = HttpExposer::current_http_manager->getImage(
-            props["src"]);
-        image = Gtk::manage(new Gtk::Image(pathh));
-        std::cout << pathh << std::endl;
-        current_widget = image;
-        image->set_halign(Gtk::Align::START);
-        image->set_hexpand(false);
-        applyCssClasses();
-        applyStyle();
-        box->append(*image);
+    image = Gtk::manage(new Gtk::Image);
+    parent_widget->append(*image);
+    disp.connect([this](){
+        image->set(img_path);
+    });
+    std::thread([this](){
+        if(props.contains("src")){
+            const std::string pathh = HttpExposer::current_http_manager->getImage(
+                props["src"]);
         
-    } 
+            std::cout << pathh << std::endl;
+            current_widget = image;
+            image->set_halign(Gtk::Align::START);
+            image->set_hexpand(false);
+            applyCssClasses();
+            applyStyle();
+            img_path = pathh;
+            disp.emit();
+        
+    }}).detach();
 };
 
 void InputTag::applyCssClasses() {

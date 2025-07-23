@@ -16,9 +16,11 @@
 #include <gtkmm/button.h>
 #include <glibmm/refptr.h>
 #include <uuid/uuid.h>
+#include <glibmm/dispatcher.h>
 
 enum TagType {
-    Html, Body, Head, h1, h2, h3, h4, h5, p, String, Image, Input, Button, Div, Stylee, Scriptt
+    Html, Body, Head, h1, h2, h3, h4, h5, p, String, Image, Input, Button, Div, Stylee, Scriptt,
+    Span, Header, Nav, Footer, Main, Article, Section, Aside
 };
 
 
@@ -104,9 +106,49 @@ public:
     DivTag(): ContainerTag(Div, "div", "box") {};
 };
 
+class SpanTag : public ContainerTag {
+public:
+    SpanTag(): ContainerTag(Span, "span", "box") {};
+};
+
+class HeaderTag : public ContainerTag {
+public:
+    HeaderTag(): ContainerTag(Header, "header", "box") {};
+};
+
+class NavTag : public ContainerTag {
+public:
+    NavTag(): ContainerTag(Nav, "span", "box") {};
+};
+
+class FooterTag : public ContainerTag {
+public:
+    FooterTag(): ContainerTag(Footer, "footer", "box") {};
+};
+
+class MainTag : public ContainerTag {
+public:
+    MainTag(): ContainerTag(Main, "main", "box") {};
+};
+
 class HeadTag : public ContainerTag {
 public:
     HeadTag(): ContainerTag(Head, "head", "box") {};
+};
+
+class ArticleTag : public ContainerTag {
+public:
+    ArticleTag(): ContainerTag(Article, "article", "box") {};
+};
+
+class SectionTag : public ContainerTag {
+public:
+    SectionTag(): ContainerTag(Section, "section", "box") {};
+};
+
+class AsideTag : public ContainerTag {
+public:
+    AsideTag(): ContainerTag(Aside, "aside", "box") {};
 };
 
 class StringTag : public HTMLTag {
@@ -128,6 +170,7 @@ class TextTag : public HTMLTag {
 public:
     TextTag(TagType type, std::string html_element_name,
         std::string element_name): HTMLTag(type, html_element_name, element_name) {};
+    Gtk::Box* box;
 
     void render(Gtk::Box* parent_box) override;
 };
@@ -168,6 +211,8 @@ class ImageTag : public HTMLTag {
 public:
     ImageTag(): HTMLTag(Image, "img", "image") {};
     Gtk::Image* image;
+    std::string img_path;
+    Glib::Dispatcher disp;
 
     void applyCssClasses() override;
     void applyStyle() override;

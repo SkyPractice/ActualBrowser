@@ -30,6 +30,22 @@ std::shared_ptr<HTMLTag> Parser::parseHtmlTag() {
     return parseImageTag();
   case DIV:
     return parseDivTag();
+  case SPAN:
+    return parseContainerTag<SpanTag, CLOSESPAN>();
+  case HEADER:
+    return parseContainerTag<HeaderTag, CLOSEHEADER>();
+  case NAV:
+    return parseContainerTag<NavTag, CLOSENAV>();
+  case FOOTER:
+    return parseContainerTag<FooterTag, CLOSEFOOTER>();
+  case MAIN:
+    return parseContainerTag<MainTag, CLOSEMAIN>();
+  case ARTICLE:
+    return parseContainerTag<ArticleTag, CLOSEARTICLE>();
+  case ASIDE:
+    return parseContainerTag<AsideTag, CLOSEASIDE>();
+  case SECTION:
+    return parseContainerTag<SectionTag, CLOSESECTION>();
   case OPENSTYLE:
     return parseStyleTag();
   case OPENSCRIPT:

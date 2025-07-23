@@ -22,6 +22,18 @@ public:
     Tag parseDivTag();
     Tag parseStyleTag();
     Tag parseScriptTag();
+    template<typename ContainerType, TokenType CloseTokenType>
+    Tag parseContainerTag(){
+        const Token html_tok = advance();
+        const auto tag = std::make_shared<ContainerType>();
+        tag->props = parseProps();
+
+        while(itr->type != CloseTokenType){
+            tag->children.push_back(parseHtmlTag());
+        }
+        advance();
+        return tag;
+    }
 
     std::unordered_map<std::string, std::string> parseProps();
 
