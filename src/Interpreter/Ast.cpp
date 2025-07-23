@@ -4,6 +4,7 @@
 #include <filesystem>
 
 void HTMLTag::render(Gtk::Box* box) {
+    parent_widget = box;
     for(auto& child : children){
         child->render(box);
     }
@@ -55,6 +56,8 @@ void ContainerTag::applyStyle() {
 };
 void ContainerTag::render(Gtk::Box* parent_box) {
     container_box = Gtk::manage(new Gtk::Box(Gtk::Orientation::VERTICAL));
+    parent_widget = parent_box;
+    current_widget = container_box;
     parent_box->append(*container_box);
     applyCssClasses();
     applyStyle();
@@ -80,6 +83,8 @@ void StringTag::applyStyle() {
 };
 void StringTag::render(Gtk::Box* targ_box) {
     lab = Gtk::manage(new Gtk::Label(str));
+    parent_widget = targ_box;
+    current_widget = lab;
     lab->add_css_class(parent_class_name);
     lab->set_hexpand(true);
     lab->set_valign(Gtk::Align::START);
@@ -122,9 +127,11 @@ void ImageTag::applyStyle() {
     }
 };
 void ImageTag::render(Gtk::Box* box) {
+    parent_widget = box;
     if(props.contains("src")){
         if(std::filesystem::exists(props["src"])){
             image = Gtk::manage(new Gtk::Image(props["src"]));
+            current_widget = image;
             image->set_halign(Gtk::Align::START);
             image->set_hexpand(false);
             applyCssClasses();
@@ -150,6 +157,8 @@ void InputTag::applyStyle() {
 };
 void InputTag::render(Gtk::Box* box) {
     input = Gtk::manage(new Gtk::Entry);
+    parent_widget = box;
+    current_widget = input;
     applyCssClasses();
     input->set_halign(Gtk::Align::START);
     input->set_hexpand(false);
@@ -173,6 +182,8 @@ void ButtonTag::applyStyle() {
 };
 void ButtonTag::render(Gtk::Box* box) {
     button = Gtk::manage(new Gtk::Button(str));
+    parent_widget = box;
+    current_widget = button;
     button->set_halign(Gtk::Align::START);
     button->set_hexpand(false);
     applyCssClasses(); 

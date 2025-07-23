@@ -6,6 +6,7 @@
 #include <gtkmm/enums.h>
 #include <gtkmm/image.h>
 #include <gtkmm/object.h>
+#include <gtkmm/widget.h>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -30,6 +31,8 @@ public:
 
     std::string html_elm_name;
     std::string elm_name;
+    Gtk::Widget* current_widget = nullptr;
+    Gtk::Box* parent_widget = nullptr;
 
     HTMLTag(TagType t, std::string html_element_name, std::string element_name): type(t),
         html_elm_name(html_element_name), elm_name(element_name){};
@@ -41,6 +44,29 @@ public:
 
     virtual void applyCssClasses() {};
     virtual void applyStyle() {};
+    virtual void setInnerHtml(std::vector<std::shared_ptr<HTMLTag>> tags) {
+        children = tags;
+    };
+    virtual void unRender(){
+        if(parent_widget && current_widget){
+            parent_widget->remove(*current_widget);
+            current_widget = nullptr;
+        }
+    }
+    void unRenderRecurseCallable(){
+        unRenderRecurse();
+        children.clear();
+    }
+    virtual void unRenderRecurse(){
+        for(auto& child : children){
+            child->unRenderRecurse();
+        }
+        unRender();
+    }
+
+    virtual ~HTMLTag() {
+        
+    }
 };
 
 class Program {
@@ -60,11 +86,17 @@ public:
     void applyStyle() override;
     void render(Gtk::Box* parent_box) override;
     
+    ~ContainerTag() {};
 };
 
 class BodyTag : public ContainerTag {
 public:
     BodyTag(): ContainerTag(Body, "body", "box") {};
+
+    ~BodyTag() {
+        if(parent_widget && current_widget)
+            parent_widget->remove(*current_widget);
+    }
 };
 
 class DivTag : public ContainerTag {
@@ -88,6 +120,8 @@ public:
     void applyCssClasses() override;
     void applyStyle() override;
     void render(Gtk::Box* targ_box) override;
+
+    ~StringTag() {};
 };
 
 class TextTag : public HTMLTag {
@@ -139,6 +173,7 @@ public:
     void applyStyle() override;
     void render(Gtk::Box* box) override;
 
+    ~ImageTag() {}
 };
 
 class InputTag : public HTMLTag {
@@ -149,6 +184,8 @@ public:
     void applyCssClasses() override;
     void applyStyle() override;
     void render(Gtk::Box* box) override;
+
+    ~InputTag() {}
 };
 
 
@@ -161,6 +198,8 @@ public:
     void applyCssClasses() override;
     void applyStyle() override;
     void render(Gtk::Box* box) override;
+
+    ~ButtonTag() {}
 };
 
 class StyleTag : public HTMLTag{

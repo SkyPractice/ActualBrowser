@@ -7,6 +7,8 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include "../Interpreter/Interpreter.h"
+#include "../Interpreter/Parser.h"
 
 SigmaInterpreter::SigmaInterpreter(){
 };
@@ -17,20 +19,20 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
             return RunTimeFactory::makeNum(std::dynamic_pointer_cast<NumericExpression>(stmt)->num);
         case StringExpressionType:
             return RunTimeFactory::makeString(
-                (std::dynamic_pointer_cast<StringExpression>(stmt)->str));
+                std::move(std::dynamic_pointer_cast<StringExpression>(stmt)->str));
         case BooleanExpressionType:
             return RunTimeFactory::makeBool(std::dynamic_pointer_cast<BoolExpression>(stmt)->val);
         case LambdaExpressionType:{
             auto stm = std::dynamic_pointer_cast<LambdaExpression>(stmt);
-            return RunTimeFactory::makeLambda((stm->params), (stm->stmts),
-                current_scope->flatten());
+            return RunTimeFactory::makeLambda(std::move(stm->params), std::move(stm->stmts),
+                std::move(current_scope->flatten()));
         }
         case ArrayExpressionType:{
             auto stm = std::dynamic_pointer_cast<ArrayExpression>(stmt);
             std::vector<RunTimeValue> vals(stm->exprs.size());
             std::transform(stm->exprs.begin(), stm->exprs.end(), vals.begin(),
                 [this](Expr expr){ return evaluate(expr); });
-            return RunTimeFactory::makeArray((vals));
+            return RunTimeFactory::makeArray(std::move(vals));
         }
         case StructExpressionType:{
             auto stm = std::dynamic_pointer_cast<StructExpression>(stmt);
@@ -47,7 +49,7 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
                 vals.insert({ vecc[k]->var_name, evaluate(vecc[k]->expr)  });
             }
 
-            return RunTimeFactory::makeStruct((vals));
+            return RunTimeFactory::makeStruct(std::move(vals));
         }
         case BinaryExpressionType:
             return evaluateBinaryExpression(std::dynamic_pointer_cast<BinaryExpression>(stmt));
@@ -238,19 +240,19 @@ RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> pro
     struct_decls.clear();
     
     std::unordered_map<std::string, RunTimeValue> console_vals;
-    console_vals.insert({"println", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::println)});
-    console_vals.insert({"print", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::print)});
-    console_vals.insert({"input", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::input)});
-    console_vals.insert({"toString", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::toString)});
+    console_vals.insert({"println", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::println, this,std::placeholders::_1))});
+    console_vals.insert({"print", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::print, this, std::placeholders::_1))});
+    console_vals.insert({"input", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::input, this, std::placeholders::_1))});
+    console_vals.insert({"toString", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::toString, this, std::placeholders::_1))});
     
     std::unordered_map<std::string, RunTimeValue> io_vals;
-    io_vals.insert({"readFileSync", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::readFileSync)});
-    io_vals.insert({"writeFileSync", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::writeFileSync)});
-    io_vals.insert({"readBinaryFileSync", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::readBinaryFileSync)});
-    io_vals.insert({"writeBinaryFileSync", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::writeBinaryFileSync)});
+    io_vals.insert({"readFileSync", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::readFileSync, this, std::placeholders::_1))});
+    io_vals.insert({"writeFileSync", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::writeFileSync, this, std::placeholders::_1))});
+    io_vals.insert({"readBinaryFileSync", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::readBinaryFileSync, this, std::placeholders::_1))});
+    io_vals.insert({"writeBinaryFileSync", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::writeBinaryFileSync, this, std::placeholders::_1))});
     
     std::unordered_map<std::string, RunTimeValue> str_vals;
-    str_vals.insert({"valueOf", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::toString)});
+    str_vals.insert({"valueOf", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::toString, this, std::placeholders::_1))});
 
     std::unordered_map<std::string, RunTimeValue> obj_vals;
 
@@ -266,17 +268,17 @@ RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> pro
         }
     )    
     });
-    obj_vals.insert({"clone", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::clone)});
+    obj_vals.insert({"clone", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::clone, this, std::placeholders::_1))});
 
     std::unordered_map<std::string, RunTimeValue> tim_vals;
-    tim_vals.insert({"getCurrentTimeMillis", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::getCurrentTimeMillis)});
+    tim_vals.insert({"getCurrentTimeMillis", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::getCurrentTimeMillis, this, std::placeholders::_1))});
 
     std::unordered_map<std::string, RunTimeValue> arr_vals;
-    arr_vals.insert({"push", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::pushBackArray)});
-    arr_vals.insert({"pop", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::popBackArray)});
-    arr_vals.insert({"pushFirst", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::pushFirstArray)});
-    arr_vals.insert({"popFirst", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::popFirstArray)});
-    arr_vals.insert({"insert", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::insertIntoArray)});
+    arr_vals.insert({"push", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::pushBackArray, this, std::placeholders::_1))});
+    arr_vals.insert({"pop", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::popBackArray, this, std::placeholders::_1))});
+    arr_vals.insert({"pushFirst", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::pushFirstArray, this, std::placeholders::_1))});
+    arr_vals.insert({"popFirst", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::popFirstArray, this, std::placeholders::_1))});
+    arr_vals.insert({"insert", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::insertIntoArray, this, std::placeholders::_1))});
 
     std::unordered_map<std::string, RunTimeValue> crypto_vals;
     crypto_vals.insert({"SHA256", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::Sha256Wrapper)});
@@ -285,6 +287,11 @@ RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> pro
     crypto_vals.insert({"AES256Decrypt", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::Aes256DecryptWrapper)});
     crypto_vals.insert({"AES256GenKey", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::Aes256GenKeyWrapper)});
 
+    std::unordered_map<std::string, RunTimeValue> dom_vals;
+    dom_vals.insert({"getElementById", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::getElementById, this, std::placeholders::_1))});
+    dom_vals.insert({"setInnerHtml", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::setElementInnerHtml, this, std::placeholders::_1))});
+
+
     current_scope->declareVar("Files", { RunTimeFactory::makeStruct((io_vals)) ,true });
     current_scope->declareVar("Console", { RunTimeFactory::makeStruct((console_vals)) ,true });
     current_scope->declareVar("String", { RunTimeFactory::makeStruct((str_vals)), true });
@@ -292,6 +299,7 @@ RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> pro
     current_scope->declareVar("Time", {RunTimeFactory::makeStruct(tim_vals), true});
     current_scope->declareVar("Array", {RunTimeFactory::makeStruct(arr_vals), true});
     current_scope->declareVar("Crypto", { RunTimeFactory::makeStruct(crypto_vals), true });
+    current_scope->declareVar("Document", { RunTimeFactory::makeStruct(dom_vals), true });
 
     for(auto& stmt : program->stmts){
         evaluate(stmt);
@@ -328,8 +336,7 @@ RunTimeValue SigmaInterpreter::evaluateBinaryExpression(std::shared_ptr<BinaryEx
 
 RunTimeValue SigmaInterpreter::evaluateVariableDeclStatement(std::shared_ptr<VariableDecleration> decl) {
     auto val = evaluate(decl->expr);
-    if(val->type == ArrayType || val->type == StringType ||
-         val->type == StructType || val->type == LambdaType || val->type == RefrenceType){
+    if(!shouldICopy(val)){
         current_scope->declareVar(decl->var_name, { val,
          decl->is_const });
         return nullptr;
@@ -403,8 +410,19 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<Fu
     // }
     
     if(func->type == NativeFunctionType){
+        auto sc = std::make_shared<Scope>(current_scope);
+        auto last_sc = current_scope;
+        current_scope = sc;
+        if(expr->func_expr->type == MemberAccessExpressionType){
+            auto mem_expr = std::dynamic_pointer_cast<MemberAccessExpression>(expr->func_expr);
+            mem_expr->path.pop_back();
+            auto mem_val = evaluate(mem_expr);
+            current_scope->declareVar("this", { mem_val, true });
+        }
         auto ac_func = std::dynamic_pointer_cast<NativeFunctionVal>(func);
-        return ac_func->func(args);
+        auto ac_vv = ac_func->func(args);
+        current_scope = last_sc;
+        return ac_vv;
     }
     if (func->type != LambdaType)
       throw std::runtime_error("<obj> is not a callable");
@@ -690,4 +708,35 @@ RunTimeValue SigmaInterpreter::evaluateNegativeExpression(std::shared_ptr<Negati
     double num = std::dynamic_pointer_cast<NumVal>(val)->num;
 
     return RunTimeFactory::makeNum(-num);
+};
+RunTimeValue SigmaInterpreter::evaluateHtmlStr(std::shared_ptr<StringExpression> expr){
+    Lexer lexer;
+    Parser parser;
+    auto tokens = lexer.tokenize(expr->str);
+    Program ast_representation = parser.produceAst(tokens);
+
+    std::vector<std::shared_ptr<RunTimeVal>> html_elms(ast_representation.html_tags.size());
+    std::vector<std::shared_ptr<RunTimeVal>> style_srcs(ast_representation.style_srcs.size());
+    std::vector<std::shared_ptr<RunTimeVal>> script_srcs(ast_representation.script_srcs.size());
+
+    std::transform(ast_representation.html_tags.begin(), ast_representation.html_tags.end(),
+        html_elms.begin(), [](std::shared_ptr<HTMLTag> elm){ 
+            return RunTimeFactory::makeHtmlElement(elm);
+        });
+    std::transform(ast_representation.script_srcs.begin(), ast_representation.script_srcs.end(),
+        script_srcs.begin(), [](std::string str){ 
+            return RunTimeFactory::makeString(str);
+        });
+    std::transform(ast_representation.style_srcs.begin(), ast_representation.style_srcs.end(),
+        style_srcs.begin(), [](std::string str){ 
+            return RunTimeFactory::makeString(str);
+        });
+    
+    std::unordered_map<std::string, std::shared_ptr<RunTimeVal>> struct_map = {
+        {"elements", RunTimeFactory::makeArray(std::move(html_elms))},
+        {"style_srcs", RunTimeFactory::makeArray(std::move(style_srcs))},
+        {"script_srcs", RunTimeFactory::makeArray(std::move(script_srcs))}
+    };
+
+    return RunTimeFactory::makeStruct(std::move(struct_map));
 };

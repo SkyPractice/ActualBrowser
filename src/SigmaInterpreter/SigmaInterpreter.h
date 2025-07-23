@@ -17,6 +17,8 @@ struct Variable {
     bool is_const;
 };
 
+struct DOMAccessor;
+
 class Scope : public std::enable_shared_from_this<Scope>{
 public: 
     std::shared_ptr<Scope> parent;
@@ -73,6 +75,8 @@ public:
 
 class SigmaInterpreter {
 public:
+    DOMAccessor* accessor;
+
     std::shared_ptr<Scope> current_scope = std::make_shared<Scope>(nullptr);
     std::unordered_map<std::string, std::function<RunTimeValue(std::vector<RunTimeValue>)>> 
         native_functions;
@@ -109,33 +113,40 @@ public:
     RunTimeValue evaluateStructDeclStatement(std::shared_ptr<StructDeclerationStatement> stmt);
     RunTimeValue evaluateMemberReInitStatement(std::shared_ptr<MemberReInitExpression> expr);
     RunTimeValue evaluateCompoundAssignmentStatement(std::shared_ptr<CompoundAssignmentStatement> stmt);
+    RunTimeValue evaluateHtmlStr(std::shared_ptr<StringExpression> expr);
 
-    static RunTimeValue print(std::vector<RunTimeValue>& args);
-    static RunTimeValue println(std::vector<RunTimeValue>& args);
-    static RunTimeValue toString(std::vector<RunTimeValue>& args);
-    static RunTimeValue numIota(std::vector<RunTimeValue>& args);
-    static RunTimeValue readFileSync(std::vector<RunTimeValue>& args);
-    static RunTimeValue writeFileSync(std::vector<RunTimeValue>& args);
-    static RunTimeValue writeBinaryFileSync(std::vector<RunTimeValue>& args);
-    static RunTimeValue readBinaryFileSync(std::vector<RunTimeValue>& args);
-    static RunTimeValue clone(std::vector<RunTimeValue>& args);
-    static RunTimeValue input(std::vector<RunTimeValue>& args);
-    static RunTimeValue getCurrentTimeMillis(std::vector<RunTimeValue>& args);
-    static RunTimeValue resizeArray(std::vector<RunTimeValue>& args);
-    static RunTimeValue pushBackArray(std::vector<RunTimeValue>& args);
-    static RunTimeValue popBackArray(std::vector<RunTimeValue>& args);
-    static RunTimeValue pushFirstArray(std::vector<RunTimeValue>& args);
-    static RunTimeValue popFirstArray(std::vector<RunTimeValue>& args);
-    static RunTimeValue insertIntoArray(std::vector<RunTimeValue>& args);
+    RunTimeValue print(std::vector<RunTimeValue>& args);
+    RunTimeValue println(std::vector<RunTimeValue>& args);
+    RunTimeValue toString(std::vector<RunTimeValue>& args);
+    RunTimeValue numIota(std::vector<RunTimeValue>& args);
+    RunTimeValue readFileSync(std::vector<RunTimeValue>& args);
+    RunTimeValue writeFileSync(std::vector<RunTimeValue>& args);
+    RunTimeValue writeBinaryFileSync(std::vector<RunTimeValue>& args);
+    RunTimeValue readBinaryFileSync(std::vector<RunTimeValue>& args);
+    RunTimeValue clone(std::vector<RunTimeValue>& args);
+    RunTimeValue input(std::vector<RunTimeValue>& args);
+    RunTimeValue getCurrentTimeMillis(std::vector<RunTimeValue>& args);
+    RunTimeValue resizeArray(std::vector<RunTimeValue>& args);
+    RunTimeValue pushBackArray(std::vector<RunTimeValue>& args);
+    RunTimeValue popBackArray(std::vector<RunTimeValue>& args);
+    RunTimeValue pushFirstArray(std::vector<RunTimeValue>& args);
+    RunTimeValue popFirstArray(std::vector<RunTimeValue>& args);
+    RunTimeValue insertIntoArray(std::vector<RunTimeValue>& args);
+    
+    RunTimeValue getElementById(std::vector<RunTimeValue>& args);
+    RunTimeValue setElementInnerHtml(std::vector<RunTimeValue>& args);
+
     static RunTimeValue copyIfRecommended(RunTimeValue val){
         if(val->type == StructType || val->type == LambdaType || val->type == StringType ||
-            val->type == ArrayType || val->type == BinaryType || val->type == NativeFunctionType)
+            val->type == ArrayType || val->type == BinaryType || val->type == NativeFunctionType ||
+            val->type == HtmlType)
             return val;
         return val->clone();
     }
     static bool shouldICopy(RunTimeValue val){
         if(val->type == StructType || val->type == LambdaType || val->type == StringType ||
-            val->type == ArrayType || val->type == BinaryType || val->type == NativeFunctionType)
+            val->type == ArrayType || val->type == BinaryType || val->type == NativeFunctionType ||
+            val->type == HtmlType)
             return false;
         return true;
     }

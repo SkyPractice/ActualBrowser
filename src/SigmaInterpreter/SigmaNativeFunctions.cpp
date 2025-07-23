@@ -13,6 +13,9 @@
 #include <string>
 #include <chrono>
 #include <vector>
+#include "../Interpreter/Interpreter.h"
+#include "../Interpreter/Lexer.h"
+#include "../Interpreter/Parser.h"
 #include "Cryptography.h"
 
 
@@ -180,4 +183,25 @@ RunTimeValue SigmaInterpreter::Aes256DecryptWrapper(std::vector<RunTimeValue>& a
     return RunTimeFactory::makeString(Crypto::decryptAes256(
         std::dynamic_pointer_cast<BinaryVal>(args[0])->binary_data,
          std::dynamic_pointer_cast<BinaryVal>(args[1])->binary_data));
+};
+
+RunTimeValue SigmaInterpreter::getElementById(std::vector<RunTimeValue>& args) {
+    std::string id = std::dynamic_pointer_cast<StringVal>(args[0])->str;
+    return RunTimeFactory::makeHtmlElement(accessor->id_ptrs.at(id));
+};
+RunTimeValue SigmaInterpreter::setElementInnerHtml(std::vector<RunTimeValue>& args){
+    auto html_elm = std::dynamic_pointer_cast<HtmlElementVal>(args[0]);
+    Lexer lex;
+    Parser pars;
+    Interpreter interpret;
+    std::string html_str = std::dynamic_pointer_cast<StringVal>(args[1])->str;
+    
+    auto tokens = lex.tokenize(html_str);
+    auto ast_val = pars.produceAst(tokens);
+    for(auto& child : html_elm->target_tag->children)
+        child->unRender();
+    html_elm->target_tag->setChildren(ast_val.html_tags);
+    interpret.renderTags(dynamic_cast<Gtk::Box*>(html_elm->target_tag->current_widget), ast_val);
+    accessor->current_interp->refreshIdsAndClasses();
+    return nullptr;
 };

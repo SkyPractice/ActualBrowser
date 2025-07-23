@@ -1,6 +1,5 @@
 #include "SigmaLexer.h"
 #include <cctype>
-#include <iostream>
 #include <stdexcept>
 #include <string>
 
@@ -38,6 +37,11 @@ std::vector<SigmaToken> SigmaLexer::tokenize(std::string code) {
             advance();
             while(current_char != '\"'){
                 str.push_back(current_char);
+                if(current_char == '\\' && code[current_pos + 1] == '\"'){
+                    str.pop_back();
+                    str.push_back('\"');
+                    advance();
+                }
                 advance();
             }
             advance();

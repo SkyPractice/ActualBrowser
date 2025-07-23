@@ -1,4 +1,5 @@
 #pragma once
+#include <gdk/gdk.h>
 #include <gdk/gdkkeysyms.h>
 #include <gdkmm/display.h>
 #include <glibmm/priorities.h>
@@ -18,6 +19,7 @@
 #include "../Interpreter/Parser.h"
 #include "../Interpreter/Interpreter.h"
 #include <gtkmm/scrolledwindow.h>
+#include <sigc++/functors/mem_fun.h>
 
 class BrowserWindow : public Gtk::Window {
     HttpManager& http_manager;
@@ -32,6 +34,14 @@ class BrowserWindow : public Gtk::Window {
 
 public:
 
+    bool on_close_request() override {
+        std::vector<std::shared_ptr<HTMLTag>> tagg;
+        interpreter.current_tags[0]->flatten(tagg);
+        for(auto& thing : tagg){
+            thing->parent_widget = nullptr; // cancell deletion cause handled auto
+        }
+        return false;
+    }
     BrowserWindow(HttpManager& httpManager): http_manager(httpManager){
         set_default_size(600, 500);
 
@@ -69,11 +79,6 @@ public:
         auto controller = Gtk::EventControllerKey::create();
         controller->signal_key_released().connect([=, this](guint keyval, guint keycode, Gdk::ModifierType state){
             if(keyval == GDK_KEY_Return && url_input->get_text_length() > 0){
-
-                while (actual_box_member->get_first_child()) {
-                    Gtk::Widget* child = actual_box_member->get_first_child();
-                    actual_box_member->remove(*child);
-                }
 
                 std::string html_content = http_manager.getRequest(url_input->get_text());
                 auto tokens = lexer.tokenize(html_content);

@@ -14,8 +14,17 @@
 #include "../SigmaInterpreter/SigmaParser.h"
 #include "../SigmaInterpreter/SigmaInterpreter.h"
 #include <iostream>
+#include <unordered_map>
 
 namespace fs = std::filesystem;
+
+class Interpreter;
+
+struct DOMAccessor {
+    std::unordered_multimap<std::string, std::shared_ptr<HTMLTag>> class_name_ptrs;
+    std::unordered_map<std::string, std::shared_ptr<HTMLTag>> id_ptrs;
+    Interpreter* current_interp;
+};
 
 class Interpreter {
 public:
@@ -26,8 +35,31 @@ public:
     Parser parser;
 
     std::vector<Glib::RefPtr<Gtk::CssProvider>> css_providers;
+    std::vector<std::shared_ptr<HTMLTag>> current_tags;
 
+    DOMAccessor accessor;
+
+    void refreshIdsAndClasses(){
+        std::vector<std::shared_ptr<HTMLTag>> flattened_tags;
+        for(auto& tag : current_tags){
+            tag->flatten(flattened_tags);
+        }
+        std::unordered_multimap<std::string, std::shared_ptr<HTMLTag>> class_name_ptrs;
+        std::unordered_map<std::string, std::shared_ptr<HTMLTag>> id_ptrs;
+
+        for(auto& tag : flattened_tags){
+            if(tag->props.contains("id"))
+                id_ptrs.insert({tag->props["id"], tag});
+            if (tag->props.contains("class"))
+                for(auto& cl : tag->getClassNames())
+                    class_name_ptrs.insert({cl, tag});
+        }
+        accessor = {.class_name_ptrs=class_name_ptrs, .id_ptrs=id_ptrs, .current_interp=this};
+        scripting_interpreter.accessor = &accessor;
+    }
     void renderTags(Gtk::Box* target_box, Program tags) {
+        reset();
+        current_tags.clear();
         for(auto& tag : tags.html_tags){
             tag->render(target_box);
         }
@@ -35,7 +67,18 @@ public:
         for(auto& tag : tags.html_tags){
             tag->flatten(flattened_tags);
         }
+        std::unordered_multimap<std::string, std::shared_ptr<HTMLTag>> class_name_ptrs;
+        std::unordered_map<std::string, std::shared_ptr<HTMLTag>> id_ptrs;
 
+        for(auto& tag : flattened_tags){
+            if(tag->props.contains("id"))
+                id_ptrs.insert({tag->props["id"], tag});
+            if (tag->props.contains("class"))
+                for(auto& cl : tag->getClassNames())
+                    class_name_ptrs.insert({cl, tag});
+        }
+        accessor = { class_name_ptrs, id_ptrs, this };
+        current_tags = tags.html_tags;
         for(auto& tag : flattened_tags){
             if(tag->type == Stylee){
                 auto style_tag = std::dynamic_pointer_cast<StyleTag>(tag);
@@ -65,11 +108,12 @@ public:
                     std::cout << "Successfully Lexed" << std::endl;
                     auto ast = scripting_parser.produceAst(tokens);
                     std::cout << "Successfully parsed" << std::endl;
+                    scripting_interpreter.accessor = &accessor;
                     auto result = scripting_interpreter.evaluate(ast);
                 }
             }
         }
-
+        current_tags = tags.html_tags;
     };
 
     void reset(){
