@@ -1,4 +1,5 @@
 #pragma once
+#include <filesystem>
 #include <gdk/gdk.h>
 #include <gdk/gdkkeysyms.h>
 #include <gdkmm/display.h>
@@ -40,6 +41,11 @@ public:
         for(auto& thing : tagg){
             thing->parent_widget = nullptr; // cancell deletion cause handled auto
         }
+        for(auto& memory_path : HttpExposer::memory_resources_paths){
+            fs::remove(memory_path);
+        }
+        EVP_cleanup();
+        ERR_free_strings();
         return false;
     }
     BrowserWindow(HttpManager& httpManager): http_manager(httpManager){

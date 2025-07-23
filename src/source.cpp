@@ -14,10 +14,8 @@ int main(int argc, char** argv){
     ssl_ctx.load_verify_file("cacert.pem");
     
     HttpManager man(io_ctx, ssl_ctx, resolver);
-
+    HttpExposer::current_http_manager = &man;
     auto app = Gtk::Application::create("org.gtkmm.example");
 
     return app->make_window_and_run<BrowserWindow>(argc, argv, man);
-    EVP_cleanup();
-    ERR_free_strings();
 }

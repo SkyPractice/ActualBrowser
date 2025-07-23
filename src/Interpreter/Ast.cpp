@@ -2,6 +2,8 @@
 #include <gtkmm/enums.h>
 #include <format>
 #include <filesystem>
+#include <iostream>
+#include "../HttpManager/HttpManager.h"
 
 void HTMLTag::render(Gtk::Box* box) {
     parent_widget = box;
@@ -129,16 +131,18 @@ void ImageTag::applyStyle() {
 void ImageTag::render(Gtk::Box* box) {
     parent_widget = box;
     if(props.contains("src")){
-        if(std::filesystem::exists(props["src"])){
-            image = Gtk::manage(new Gtk::Image(props["src"]));
-            current_widget = image;
-            image->set_halign(Gtk::Align::START);
-            image->set_hexpand(false);
-            applyCssClasses();
-            applyStyle();
-            box->append(*image);
-        }
-    }
+        const std::string pathh = HttpExposer::current_http_manager->getImage(
+            props["src"]);
+        image = Gtk::manage(new Gtk::Image(pathh));
+        std::cout << pathh << std::endl;
+        current_widget = image;
+        image->set_halign(Gtk::Align::START);
+        image->set_hexpand(false);
+        applyCssClasses();
+        applyStyle();
+        box->append(*image);
+        
+    } 
 };
 
 void InputTag::applyCssClasses() {
