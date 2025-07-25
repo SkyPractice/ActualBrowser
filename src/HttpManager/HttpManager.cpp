@@ -137,7 +137,6 @@ std::string HttpManager::getImage(std::string url) {
 
     sock.lowest_layer().close();
     std::string path_name = std::format("/tmp/{}.{}", file_name, ext);
-    HttpExposer::memory_resources_paths.push_back(path_name);
     return path_name;
 };
 

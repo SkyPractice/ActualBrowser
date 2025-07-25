@@ -1,4 +1,5 @@
 #pragma once
+#include <filesystem>
 #include <glibmm/refptr.h>
 #include <gtk/gtk.h>
 #include <gtkmm/cssprovider.h>
@@ -218,7 +219,11 @@ public:
     void applyStyle() override;
     void render(Gtk::Box* box) override;
 
-    ~ImageTag() {}
+    ~ImageTag() {
+        if(std::filesystem::exists(img_path)){
+            std::filesystem::remove(img_path);
+        }
+    }
 };
 
 class InputTag : public HTMLTag {

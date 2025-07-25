@@ -41,9 +41,6 @@ public:
         for(auto& thing : tagg){
             thing->parent_widget = nullptr; // cancell deletion cause handled auto
         }
-        for(auto& memory_path : HttpExposer::memory_resources_paths){
-            fs::remove(memory_path);
-        }
         EVP_cleanup();
         ERR_free_strings();
         return false;

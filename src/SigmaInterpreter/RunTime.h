@@ -25,6 +25,8 @@ public:
     virtual std::string getString() { return ""; };
 };
 
+typedef std::shared_ptr<RunTimeVal> RunTimeValue;
+
 class NumVal : public RunTimeVal {
 public:
     double num;

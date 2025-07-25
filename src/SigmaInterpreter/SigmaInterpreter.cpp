@@ -9,9 +9,54 @@
 #include <unordered_map>
 #include "../Interpreter/Interpreter.h"
 #include "../Interpreter/Parser.h"
+#include "StandardLibrary/ConsoleLib/ConsoleLib.h"
+#include "StandardLibrary/ArrayLib/ArrayLib.h"
+#include "StandardLibrary/FilesLib/FilesLib.h"
+#include "StandardLibrary/CryptoLib/CryptoLib.h"
+
 
 SigmaInterpreter::SigmaInterpreter(){
 };
+
+void SigmaInterpreter::initialize(){
+    current_scope = std::make_shared<Scope>(nullptr);
+    struct_decls.clear();
+    
+    std::unordered_map<std::string, RunTimeValue> str_vals;
+    str_vals.insert({"valueOf", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::toString, this, std::placeholders::_1))});
+
+    std::unordered_map<std::string, RunTimeValue> obj_vals;
+
+    obj_vals.insert({"ref", RunTimeFactory::makeNativeFunction(
+        [this](std::vector<std::shared_ptr<RunTimeVal>>& vals) { 
+        return RunTimeFactory::makeRefrence(&vals[0]);
+        }
+    )    
+    });
+    obj_vals.insert({"valByRef", RunTimeFactory::makeNativeFunction(
+        [this](std::vector<std::shared_ptr<RunTimeVal>>& vals) { 
+            return *std::dynamic_pointer_cast<RefrenceVal>(vals[0])->val;
+        }
+    )    
+    });
+    obj_vals.insert({"clone", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::clone, this, std::placeholders::_1))});
+
+    std::unordered_map<std::string, RunTimeValue> tim_vals;
+    tim_vals.insert({"getCurrentTimeMillis", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::getCurrentTimeMillis, this, std::placeholders::_1))});
+    std::unordered_map<std::string, RunTimeValue> dom_vals;
+    dom_vals.insert({"getElementById", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::getElementById, this, std::placeholders::_1))});
+    dom_vals.insert({"getElementsByClassName", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::getElementsByClassName, this, std::placeholders::_1))});
+    dom_vals.insert({"setInnerHtml", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::setElementInnerHtml, this, std::placeholders::_1))});
+
+    current_scope->declareVar("Files", { FilesLib::getStruct() ,true });
+    current_scope->declareVar("Console", { ConsoleLib::getStruct() ,true });
+    current_scope->declareVar("String", { RunTimeFactory::makeStruct((str_vals)), true });
+    current_scope->declareVar("Object", { RunTimeFactory::makeStruct((obj_vals)), true });
+    current_scope->declareVar("Time", {RunTimeFactory::makeStruct(tim_vals), true});
+    current_scope->declareVar("Array", {ArrayLib::getStruct(), true});
+    current_scope->declareVar("Crypto", { CryptoLib::getStruct(), true });
+    current_scope->declareVar("Document", { RunTimeFactory::makeStruct(dom_vals), true });
+}
 
 RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
     switch (stmt->type) {
@@ -236,73 +281,7 @@ RunTimeValue SigmaInterpreter::evaluateForLoopStatement(std::shared_ptr<ForLoopS
 };
 
 RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> program) {
-    current_scope = std::make_shared<Scope>(nullptr);
-    struct_decls.clear();
-    
-    std::unordered_map<std::string, RunTimeValue> console_vals;
-    console_vals.insert({"println", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::println, this,std::placeholders::_1))});
-    console_vals.insert({"print", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::print, this, std::placeholders::_1))});
-    console_vals.insert({"input", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::input, this, std::placeholders::_1))});
-    console_vals.insert({"toString", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::toString, this, std::placeholders::_1))});
-    
-    std::unordered_map<std::string, RunTimeValue> io_vals;
-    io_vals.insert({"readFileSync", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::readFileSync, this, std::placeholders::_1))});
-    io_vals.insert({"writeFileSync", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::writeFileSync, this, std::placeholders::_1))});
-    io_vals.insert({"readBinaryFileSync", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::readBinaryFileSync, this, std::placeholders::_1))});
-    io_vals.insert({"writeBinaryFileSync", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::writeBinaryFileSync, this, std::placeholders::_1))});
-    
-    std::unordered_map<std::string, RunTimeValue> str_vals;
-    str_vals.insert({"valueOf", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::toString, this, std::placeholders::_1))});
-
-    std::unordered_map<std::string, RunTimeValue> obj_vals;
-
-    obj_vals.insert({"ref", RunTimeFactory::makeNativeFunction(
-        [this](std::vector<std::shared_ptr<RunTimeVal>>& vals) { 
-        return RunTimeFactory::makeRefrence(&vals[0]);
-        }
-    )    
-    });
-    obj_vals.insert({"valByRef", RunTimeFactory::makeNativeFunction(
-        [this](std::vector<std::shared_ptr<RunTimeVal>>& vals) { 
-            return *std::dynamic_pointer_cast<RefrenceVal>(vals[0])->val;
-        }
-    )    
-    });
-    obj_vals.insert({"clone", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::clone, this, std::placeholders::_1))});
-
-    std::unordered_map<std::string, RunTimeValue> tim_vals;
-    tim_vals.insert({"getCurrentTimeMillis", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::getCurrentTimeMillis, this, std::placeholders::_1))});
-
-    std::unordered_map<std::string, RunTimeValue> arr_vals;
-    arr_vals.insert({"push", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::pushBackArray, this, std::placeholders::_1))});
-    arr_vals.insert({"pop", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::popBackArray, this, std::placeholders::_1))});
-    arr_vals.insert({"pushFirst", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::pushFirstArray, this, std::placeholders::_1))});
-    arr_vals.insert({"popFirst", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::popFirstArray, this, std::placeholders::_1))});
-    arr_vals.insert({"insert", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::insertIntoArray, this, std::placeholders::_1))});
-    arr_vals.insert({"getSize", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::arraySize, this, std::placeholders::_1))});
-
-    std::unordered_map<std::string, RunTimeValue> crypto_vals;
-    crypto_vals.insert({"SHA256", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::Sha256Wrapper)});
-    crypto_vals.insert({"SHA512", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::Sha512Wrapper)});
-    crypto_vals.insert({"AES256Encrypt", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::Aes256Wrapper)});
-    crypto_vals.insert({"AES256Decrypt", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::Aes256DecryptWrapper)});
-    crypto_vals.insert({"AES256GenKey", RunTimeFactory::makeNativeFunction(&SigmaInterpreter::Aes256GenKeyWrapper)});
-
-    std::unordered_map<std::string, RunTimeValue> dom_vals;
-    dom_vals.insert({"getElementById", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::getElementById, this, std::placeholders::_1))});
-    dom_vals.insert({"getElementsByClassName", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::getElementsByClassName, this, std::placeholders::_1))});
-    dom_vals.insert({"setInnerHtml", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::setElementInnerHtml, this, std::placeholders::_1))});
-
-
-    current_scope->declareVar("Files", { RunTimeFactory::makeStruct((io_vals)) ,true });
-    current_scope->declareVar("Console", { RunTimeFactory::makeStruct((console_vals)) ,true });
-    current_scope->declareVar("String", { RunTimeFactory::makeStruct((str_vals)), true });
-    current_scope->declareVar("Object", { RunTimeFactory::makeStruct((obj_vals)), true });
-    current_scope->declareVar("Time", {RunTimeFactory::makeStruct(tim_vals), true});
-    current_scope->declareVar("Array", {RunTimeFactory::makeStruct(arr_vals), true});
-    current_scope->declareVar("Crypto", { RunTimeFactory::makeStruct(crypto_vals), true });
-    current_scope->declareVar("Document", { RunTimeFactory::makeStruct(dom_vals), true });
-
+    initialize();
     for(auto& stmt : program->stmts){
         evaluate(stmt);
     }

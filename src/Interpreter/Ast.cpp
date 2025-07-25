@@ -2,7 +2,7 @@
 #include <gtkmm/box.h>
 #include <gtkmm/enums.h>
 #include <format>
-#include <filesystem>
+#include "../Concurrency/ThreadPool.h"
 #include <gtkmm/image.h>
 #include <gtkmm/object.h>
 #include <iostream>
@@ -150,7 +150,7 @@ void ImageTag::render(Gtk::Box* box) {
     disp.connect([this](){
         image->set(img_path);
     });
-    std::thread([this](){
+    boost::asio::post(Concurrency::pool, [this](){
         if(props.contains("src")){
             const std::string pathh = HttpExposer::current_http_manager->getImage(
                 props["src"]);
@@ -164,7 +164,7 @@ void ImageTag::render(Gtk::Box* box) {
             img_path = pathh;
             disp.emit();
         
-    }}).detach();
+    }});
 };
 
 void InputTag::applyCssClasses() {

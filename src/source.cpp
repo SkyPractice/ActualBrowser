@@ -1,8 +1,10 @@
 #include <gtkmm/window.h>
-#include <iostream>
 #include "HttpManager/HttpManager.h"
 #include "GUI/Window.h"
 #include <gtkmm/application.h>
+#include "Concurrency/ThreadPool.h"
+
+boost::asio::thread_pool Concurrency::pool = boost::asio::thread_pool(4);
 
 int main(int argc, char** argv){
     ERR_load_crypto_strings();

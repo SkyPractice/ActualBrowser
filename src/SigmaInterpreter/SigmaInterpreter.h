@@ -87,6 +87,7 @@ public:
 
     SigmaInterpreter();
     
+    void initialize();
     RunTimeValue evaluate(Stmt stmt);
     RunTimeValue evaluateProgram(std::shared_ptr<SigmaProgram> program);
     RunTimeValue evaluateBinaryExpression(std::shared_ptr<BinaryExpression> expr);
@@ -115,28 +116,18 @@ public:
     RunTimeValue evaluateCompoundAssignmentStatement(std::shared_ptr<CompoundAssignmentStatement> stmt);
     RunTimeValue evaluateHtmlStr(std::shared_ptr<StringExpression> expr);
 
-    RunTimeValue print(std::vector<RunTimeValue>& args);
-    RunTimeValue println(std::vector<RunTimeValue>& args);
+
     RunTimeValue toString(std::vector<RunTimeValue>& args);
     RunTimeValue numIota(std::vector<RunTimeValue>& args);
-    RunTimeValue readFileSync(std::vector<RunTimeValue>& args);
-    RunTimeValue writeFileSync(std::vector<RunTimeValue>& args);
-    RunTimeValue writeBinaryFileSync(std::vector<RunTimeValue>& args);
-    RunTimeValue readBinaryFileSync(std::vector<RunTimeValue>& args);
     RunTimeValue clone(std::vector<RunTimeValue>& args);
-    RunTimeValue input(std::vector<RunTimeValue>& args);
     RunTimeValue getCurrentTimeMillis(std::vector<RunTimeValue>& args);
-    RunTimeValue resizeArray(std::vector<RunTimeValue>& args);
-    RunTimeValue pushBackArray(std::vector<RunTimeValue>& args);
-    RunTimeValue popBackArray(std::vector<RunTimeValue>& args);
-    RunTimeValue pushFirstArray(std::vector<RunTimeValue>& args);
-    RunTimeValue popFirstArray(std::vector<RunTimeValue>& args);
-    RunTimeValue insertIntoArray(std::vector<RunTimeValue>& args);
-    RunTimeValue arraySize(std::vector<RunTimeValue>& args);
+
     
     RunTimeValue getElementById(std::vector<RunTimeValue>& args);
     RunTimeValue setElementInnerHtml(std::vector<RunTimeValue>& args);
     RunTimeValue getElementsByClassName(std::vector<RunTimeValue>& args);
+
+    RunTimeValue evaluateAnonymousLambdaCall(std::shared_ptr<LambdaVal> lambda, std::vector<RunTimeValue> args);
 
     static RunTimeValue copyIfRecommended(RunTimeValue val){
         if(val->type == StructType || val->type == LambdaType || val->type == StringType ||
@@ -155,10 +146,6 @@ public:
 
 
     // Crypto wrappers
-    static RunTimeValue Sha256Wrapper(std::vector<RunTimeValue>& args);
-    static RunTimeValue Sha512Wrapper(std::vector<RunTimeValue>& args);
-    static RunTimeValue Aes256Wrapper(std::vector<RunTimeValue>& args);
-    static RunTimeValue Aes256DecryptWrapper(std::vector<RunTimeValue>& args);
 
-    static RunTimeValue Aes256GenKeyWrapper(std::vector<RunTimeValue>& args);
+
 };
