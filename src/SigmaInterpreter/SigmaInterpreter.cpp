@@ -2,8 +2,10 @@
 #include "RunTime.h"
 #include "SigmaAst.h"
 #include <algorithm>
+#include <format>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -13,6 +15,8 @@
 #include "StandardLibrary/ArrayLib/ArrayLib.h"
 #include "StandardLibrary/FilesLib/FilesLib.h"
 #include "StandardLibrary/CryptoLib/CryptoLib.h"
+#include "StandardLibrary/StdLib.h"
+#include "StandardLibrary/ThreadLib/ThreadLib.h"
 
 
 SigmaInterpreter::SigmaInterpreter(){
@@ -56,6 +60,7 @@ void SigmaInterpreter::initialize(){
     current_scope->declareVar("Array", {ArrayLib::getStruct(), true});
     current_scope->declareVar("Crypto", { CryptoLib::getStruct(), true });
     current_scope->declareVar("Document", { RunTimeFactory::makeStruct(dom_vals), true });
+    current_scope->declareVar("Thread", {ThreadLib::getStruct(), true});
 }
 
 RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
@@ -64,12 +69,12 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
             return RunTimeFactory::makeNum(std::dynamic_pointer_cast<NumericExpression>(stmt)->num);
         case StringExpressionType:
             return RunTimeFactory::makeString(
-                std::move(std::dynamic_pointer_cast<StringExpression>(stmt)->str));
+                (std::dynamic_pointer_cast<StringExpression>(stmt)->str));
         case BooleanExpressionType:
             return RunTimeFactory::makeBool(std::dynamic_pointer_cast<BoolExpression>(stmt)->val);
         case LambdaExpressionType:{
             auto stm = std::dynamic_pointer_cast<LambdaExpression>(stmt);
-            return RunTimeFactory::makeLambda(std::move(stm->params), std::move(stm->stmts),
+            return RunTimeFactory::makeLambda((stm->params), (stm->stmts),
                 std::move(current_scope->flatten()));
         }
         case ArrayExpressionType:{
@@ -282,6 +287,7 @@ RunTimeValue SigmaInterpreter::evaluateForLoopStatement(std::shared_ptr<ForLoopS
 
 RunTimeValue SigmaInterpreter::evaluateProgram(std::shared_ptr<SigmaProgram> program) {
     initialize();
+    auto v = std::dynamic_pointer_cast<ForLoopStatement>(program->stmts[0]);
     for(auto& stmt : program->stmts){
         evaluate(stmt);
     }
@@ -329,9 +335,10 @@ RunTimeValue SigmaInterpreter::evaluateVariableDeclStatement(std::shared_ptr<Var
 
 RunTimeValue SigmaInterpreter::evaluateVariableReInitStatement(std::shared_ptr<VariableReInit> decl) {
     if(current_scope->traverse("this")){
-        if(current_scope->getVal("this")->type == StructType){
+        auto this_val = current_scope->getVal("this");
+        if(this_val->type == StructType){
             auto vall = std::dynamic_pointer_cast<StructVal>(
-                current_scope->getVal("this"));
+                this_val);
             if(vall->vals.contains(decl->var_name)){
                 auto v = evaluate(decl->expr);
                 auto stru = std::dynamic_pointer_cast<StructVal>(current_scope->getVal("this"));
@@ -350,14 +357,15 @@ RunTimeValue SigmaInterpreter::evaluateVariableReInitStatement(std::shared_ptr<V
         }
     }
     auto ac_v = evaluate(decl->expr);
-    if(current_scope->getVal(decl->var_name)->type == RefrenceType){
+    auto v = current_scope->getVal(decl->var_name);
+    if(v->type == RefrenceType){
         auto actual_ref = 
-            std::dynamic_pointer_cast<RefrenceVal>(current_scope->getVal(decl->var_name));
+            std::dynamic_pointer_cast<RefrenceVal>(v);
         *actual_ref->val = (ac_v);
         return nullptr;
     }
-    if(shouldICopy(current_scope->getVal(decl->var_name))){
-        current_scope->getVal(decl->var_name)->setValue(ac_v);
+    if(shouldICopy(v)){
+        v->setValue(ac_v);
         return nullptr;
     }
     current_scope->reInitVar(decl->var_name, (ac_v));
@@ -367,7 +375,6 @@ RunTimeValue SigmaInterpreter::evaluateVariableReInitStatement(std::shared_ptr<V
 RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<FunctionCallExpression> expr) {
     
     std::vector<RunTimeValue> args(expr->args.size());
-    std::vector<RunTimeValue*> var_args(expr->args.size());
     auto func = evaluate(expr->func_expr);
 
     if(func->type == LambdaType)
@@ -376,12 +383,14 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<Fu
             auto va = evaluate(expr);
             return copyIfRecommended(va);
         });
-    else if(func->type == NativeFunctionType)
+    else if(func->type == NativeFunctionType){
+        StdLib::current_calling_scope = current_scope;
         std::transform(expr->args.begin(), expr->args.end(), args.begin(),
         [this](Expr& expr){ 
             auto va = evaluate(expr);
             return va;
         });
+    }
     // if(expr->func_expr->type == IdentifierExpressionType){
     //     std::string name = std::dynamic_pointer_cast<IdentifierExpression>(expr->func_expr)->str;
     //     std::cout << "Function name: " << name << std::endl;
@@ -395,7 +404,7 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<Fu
         auto last_sc = current_scope;
         current_scope = sc;
         if(expr->func_expr->type == MemberAccessExpressionType){
-            auto mem_expr = std::dynamic_pointer_cast<MemberAccessExpression>(expr->func_expr);
+            auto mem_expr = std::dynamic_pointer_cast<MemberAccessExpression>(expr->func_expr)->clone_expr();
             mem_expr->path.pop_back();
             auto mem_val = evaluate(mem_expr);
             current_scope->declareVar("this", { mem_val, true });
@@ -403,23 +412,24 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(std::shared_ptr<Fu
         auto ac_func = std::dynamic_pointer_cast<NativeFunctionVal>(func);
         auto ac_vv = ac_func->func(args);
         current_scope = last_sc;
+        StdLib::current_calling_scope = nullptr;
         return ac_vv;
     }
     if (func->type != LambdaType)
-      throw std::runtime_error("<obj> is not a callable");
+      throw std::runtime_error(std::format("{} is not a callable", (int)func->type));
     auto actual_func = std::dynamic_pointer_cast<LambdaVal>(func);
     
     auto last_scope = current_scope;
 
-    auto arg_scope = std::make_shared<Scope>(nullptr);
+    auto arg_scope = std::make_shared<Scope>(current_scope);
     current_scope = arg_scope;
     for (int i = 0; i < args.size(); i++) {
       current_scope->declareVar(actual_func->params[i], {args[i], false});
     }
-    for(auto& [var_name, var_val] : actual_func->captured){
-        if(!current_scope->variables.contains(var_name))
-            current_scope->declareVar(var_name, {var_val, true});
-    }
+    // for(auto& [var_name, var_val] : actual_func->captured){
+    //     if(!current_scope->variables.contains(var_name))
+    //         current_scope->declareVar(var_name, {var_val, true});
+    // }
     if(expr->func_expr->type == MemberAccessExpressionType){
         auto mem_expr = std::dynamic_pointer_cast<MemberAccessExpression>(expr->func_expr);
         mem_expr->path.pop_back();
@@ -631,10 +641,11 @@ RunTimeValue SigmaInterpreter::
 RunTimeValue SigmaInterpreter::evaluateMemberReInitStatement(
     std::shared_ptr<MemberReInitExpression> expr) {
     auto val = evaluate(expr->struct_expr);
-    auto latest_str = expr->path.back();
-    expr->path.pop_back();
+    auto path_copy = expr->path;
+    auto latest_str = path_copy.back();
+    path_copy.pop_back();
 
-    for(auto& str : expr->path){
+    for(auto& str : path_copy){
         val = std::dynamic_pointer_cast<StructVal>(val)->vals[
             str
         ];

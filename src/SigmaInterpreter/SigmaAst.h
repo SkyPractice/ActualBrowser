@@ -256,6 +256,9 @@ public:
     MemberAccessExpression(std::shared_ptr<Expression> expr,
         std::vector<std::string> p): Expression(MemberAccessExpressionType), struct_expr(expr),
         path(p) {};
+    std::shared_ptr<MemberAccessExpression> clone_expr(){
+        return std::make_shared<MemberAccessExpression>(struct_expr, path);
+    }
 };
 
 class MemberReInitExpression : public Expression {

@@ -3,6 +3,7 @@
 #include "SigmaAst.h"
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
@@ -72,7 +73,6 @@ public:
         }
     }
 };
-
 class SigmaInterpreter {
 public:
     DOMAccessor* accessor;

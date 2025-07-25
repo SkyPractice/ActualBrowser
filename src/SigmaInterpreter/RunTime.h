@@ -1,12 +1,15 @@
 #pragma once
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <sys/cdefs.h>
 #include <vector>
 #include "SigmaAst.h"
 #include <unordered_map>
 #include <memory_resource>
+#include <iostream>
+#include <atomic>
 #include "../Interpreter/Ast.h"
 
 enum RunTimeValType {
@@ -30,13 +33,24 @@ typedef std::shared_ptr<RunTimeVal> RunTimeValue;
 class NumVal : public RunTimeVal {
 public:
     double num;
+    std::mutex mut;
     NumVal(double number): RunTimeVal(NumType), num(number) {};
 
     std::shared_ptr<RunTimeVal> clone() override;
-
-    void setValue(std::shared_ptr<RunTimeVal> val) override {
-        num = std::dynamic_pointer_cast<NumVal>(val)->num;
-    };
+void setValue(std::shared_ptr<RunTimeVal> val) override {
+    std::lock_guard<std::mutex> lock(mut);
+    if (!val) { // CRITICAL CHECK
+        std::cerr << "Error: NumVal::setValue received a null shared_ptr for 'val'!" << std::endl;
+        // You MUST handle this error. Throwing an exception is usually best.
+        throw std::runtime_error("Attempted to set NumVal with a null value.");
+    }
+    std::shared_ptr<NumVal> num_val_ptr = std::dynamic_pointer_cast<NumVal>(val);
+    if (!num_val_ptr) {
+        std::cerr << "Error: NumVal::setValue received a non-NumVal type!, The Type Is" << val->type << std::endl;
+        throw std::runtime_error("Type mismatch in NumVal::setValue: Expected NumVal.");
+    }
+    num = num_val_ptr->num;
+}
 
     std::string getString() override {
         return std::to_string(num);

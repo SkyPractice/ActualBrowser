@@ -84,15 +84,15 @@ RunTimeValue SigmaInterpreter::
     
     auto last_scope = current_scope;
 
-    auto arg_scope = std::make_shared<Scope>(nullptr);
+    auto arg_scope = std::make_shared<Scope>(current_scope);
     current_scope = arg_scope;
     for (int i = 0; i < args.size(); i++) {
       current_scope->declareVar(actual_func->params[i], {args[i], false});
     }
-    for(auto& [var_name, var_val] : actual_func->captured){
-        if(!current_scope->variables.contains(var_name))
-            current_scope->declareVar(var_name, {var_val, true});
-    }
+    // for(auto& [var_name, var_val] : actual_func->captured){
+    //     if(!current_scope->variables.contains(var_name))
+    //         current_scope->declareVar(var_name, {var_val, true});
+    // }
 
     auto func_scope = std::make_shared<Scope>(current_scope);
     

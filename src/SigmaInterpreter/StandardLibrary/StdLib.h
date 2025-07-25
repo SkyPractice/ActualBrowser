@@ -9,6 +9,7 @@ class Scope;
 
 class StdLib {
 public:
+    static std::shared_ptr<Scope> current_calling_scope;
     void addValToStruct(std::shared_ptr<StructVal> target_struct, std::string name,
         std::shared_ptr<RunTimeVal> val);
 
