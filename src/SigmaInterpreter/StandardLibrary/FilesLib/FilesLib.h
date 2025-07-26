@@ -3,7 +3,7 @@
 
 class FilesLib : public StdLib {
 public:
-    static std::shared_ptr<StructVal> getStruct();
+    static StructVal* getStruct();
 
     static RunTimeValue readFileSync(std::vector<RunTimeValue>& args);
     static RunTimeValue writeFileSync(std::vector<RunTimeValue>& args);

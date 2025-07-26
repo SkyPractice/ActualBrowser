@@ -6,7 +6,7 @@
 #include "../../../Concurrency/ThreadPool.h"
 #include "../../SigmaInterpreter.h"
 
-std::shared_ptr<StructVal> FilesLib::getStruct() {
+StructVal* FilesLib::getStruct() {
     std::unordered_map<std::string, RunTimeValue> vals = {
         {"readFileSync", RunTimeFactory::makeNativeFunction(&FilesLib::readFileSync)},
         {"writeFileSync", RunTimeFactory::makeNativeFunction(&FilesLib::writeFileSync)},
@@ -24,7 +24,7 @@ std::shared_ptr<StructVal> FilesLib::getStruct() {
 RunTimeValue FilesLib::readFileSync(std::vector<RunTimeValue>& args) {
     if(args[0]->type != StringType) throw
         std::runtime_error("readFileSync Excepts arg 0 to be of type String");
-    std::string path = std::dynamic_pointer_cast<StringVal>(args[0])->str;
+    std::string path = dynamic_cast<StringVal*>(args[0])->str;
     if(!std::filesystem::exists(path)) 
         throw std::runtime_error("file " + path + " doesn't exist");
     std::ifstream strea(path, std::ios::ate);
@@ -39,8 +39,8 @@ RunTimeValue FilesLib::readFileSync(std::vector<RunTimeValue>& args) {
 RunTimeValue FilesLib::writeFileSync(std::vector<RunTimeValue>& args) {
     if(args[0]->type != StringType || args[0]->type != StringType) throw
         std::runtime_error("writeFileSync Excepts arg 0 and 1 to be of type String");
-    std::string path = std::dynamic_pointer_cast<StringVal>(args[0])->str;
-    std::string str = std::dynamic_pointer_cast<StringVal>(args[1])->str;
+    std::string path = dynamic_cast<StringVal*>(args[0])->str;
+    std::string str = dynamic_cast<StringVal*>(args[1])->str;
     std::ofstream strea(path);
     strea.write(&str[0], str.size());
     strea.close();
@@ -48,8 +48,8 @@ RunTimeValue FilesLib::writeFileSync(std::vector<RunTimeValue>& args) {
 };
 
 RunTimeValue FilesLib::writeBinaryFileSync(std::vector<RunTimeValue>& args){
-    std::string path = std::dynamic_pointer_cast<StringVal>(args[0])->str;
-    std::vector<unsigned char> val = std::dynamic_pointer_cast<BinaryVal>(args[1])->binary_data;
+    std::string path = dynamic_cast<StringVal*>(args[0])->str;
+    std::vector<unsigned char> val = dynamic_cast<BinaryVal*>(args[1])->binary_data;
     std::ofstream strea(path, std::ios::binary);
     size_t siz = val.size();
     strea.write(reinterpret_cast<const char*>(&siz), sizeof(size_t));
@@ -58,7 +58,7 @@ RunTimeValue FilesLib::writeBinaryFileSync(std::vector<RunTimeValue>& args){
     return RunTimeFactory::makeNum(0); // success
 };
 RunTimeValue FilesLib::readBinaryFileSync(std::vector<RunTimeValue>& args){
-    std::string path = std::dynamic_pointer_cast<StringVal>(args[0])->str;
+    std::string path = dynamic_cast<StringVal*>(args[0])->str;
     std::vector<unsigned char> val;
     size_t siz = 0;
     std::ifstream strea(path, std::ios::binary);
@@ -73,7 +73,7 @@ RunTimeValue FilesLib::readBinaryFileSync(std::vector<RunTimeValue>& args){
 RunTimeValue FilesLib::readFileAsync(std::vector<RunTimeValue>& args) {
     std::vector<RunTimeValue> actual_args = args;
     boost::asio::post(Concurrency::pool, [args]() mutable {
-        auto lambda_val = std::dynamic_pointer_cast<LambdaVal>(args[1]);
+        auto lambda_val = dynamic_cast<LambdaVal*>(args[1]);
         SigmaInterpreter interp;
         interp.initialize();
         interp.evaluateAnonymousLambdaCall(lambda_val, {FilesLib::readFileSync(args)});
@@ -83,7 +83,7 @@ RunTimeValue FilesLib::readFileAsync(std::vector<RunTimeValue>& args) {
 RunTimeValue FilesLib::writeFileAsync(std::vector<RunTimeValue>& args) {
     std::vector<RunTimeValue> actual_args = args;
     boost::asio::post(Concurrency::pool, [args]() mutable {
-        auto lambda_val = std::dynamic_pointer_cast<LambdaVal>(args[2]);
+        auto lambda_val = dynamic_cast<LambdaVal*>(args[2]);
         SigmaInterpreter interp;
         interp.initialize();
         interp.evaluateAnonymousLambdaCall(lambda_val, {FilesLib::writeFileSync(args)});
@@ -93,7 +93,7 @@ RunTimeValue FilesLib::writeFileAsync(std::vector<RunTimeValue>& args) {
 RunTimeValue FilesLib::writeBinaryFileAsync(std::vector<RunTimeValue>& args) {
     std::vector<RunTimeValue> actual_args = args;
     boost::asio::post(Concurrency::pool, [args]() mutable {
-        auto lambda_val = std::dynamic_pointer_cast<LambdaVal>(args[2]);
+        auto lambda_val = dynamic_cast<LambdaVal*>(args[2]);
         SigmaInterpreter interp;
         interp.initialize();
         interp.evaluateAnonymousLambdaCall(lambda_val, {FilesLib::writeBinaryFileSync(args)});
@@ -103,7 +103,7 @@ RunTimeValue FilesLib::writeBinaryFileAsync(std::vector<RunTimeValue>& args) {
 RunTimeValue FilesLib::readBinaryFileAsync(std::vector<RunTimeValue>& args) {
     std::vector<RunTimeValue> actual_args = args;
     boost::asio::post(Concurrency::pool, [args]() mutable {
-        auto lambda_val = std::dynamic_pointer_cast<LambdaVal>(args[1]);
+        auto lambda_val = dynamic_cast<LambdaVal*>(args[1]);
         SigmaInterpreter interp;
         interp.initialize();
         interp.evaluateAnonymousLambdaCall(lambda_val, {FilesLib::readBinaryFileSync(args)});

@@ -3,7 +3,7 @@
 
 class ArrayLib {
 public:
-    static std::shared_ptr<StructVal> getStruct();
+    static StructVal* getStruct();
 
     static RunTimeValue resizeArray(std::vector<RunTimeValue>& args);
     static RunTimeValue pushBackArray(std::vector<RunTimeValue>& args);

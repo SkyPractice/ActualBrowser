@@ -6,21 +6,22 @@
 #include "../RunTime.h"
 
 class Scope;
+typedef RunTimeVal* RunTimeValue;
 
 class StdLib {
 public:
     static std::shared_ptr<Scope> current_calling_scope;
-    void addValToStruct(std::shared_ptr<StructVal> target_struct, std::string name,
-        std::shared_ptr<RunTimeVal> val);
+    void addValToStruct(StructVal* target_struct, std::string name,
+        RunTimeVal* val);
 
-    static RunTimeValue copyIfRecommended(RunTimeValue val){
+    static RunTimeVal* copyIfRecommended(RunTimeVal* val){
         if(val->type == StructType || val->type == LambdaType || val->type == StringType ||
             val->type == ArrayType || val->type == BinaryType || val->type == NativeFunctionType ||
             val->type == HtmlType)
             return val;
         return val->clone();
     }
-    static bool shouldICopy(RunTimeValue val){
+    static bool shouldICopy(RunTimeVal* val){
         if(val->type == StructType || val->type == LambdaType || val->type == StringType ||
             val->type == ArrayType || val->type == BinaryType || val->type == NativeFunctionType ||
             val->type == HtmlType)
@@ -30,6 +31,6 @@ public:
 };
 
 class StdLibInitializer {
-    void declareStdLibMemberInScope(std::string struct_name, std::shared_ptr<RunTimeVal> struct_val,
-        std::shared_ptr<Scope> target_scope);
+    void declareStdLibMemberInScope(std::string struct_name, RunTimeVal* struct_val,
+        Scope* target_scope);
 };

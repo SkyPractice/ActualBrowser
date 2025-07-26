@@ -2,13 +2,28 @@
 #include "SigmaAst.h"
 #include "SigmaLexer.h"
 #include <memory>
+#include <memory_resource>
 
-typedef std::shared_ptr<Statement> Stmt;
-typedef std::shared_ptr<Expression> Expr;
+typedef Statement* Stmt;
+typedef Expression* Expr;
 
 class SigmaParser {
 public:
-    std::shared_ptr<SigmaProgram> produceAst(std::vector<SigmaToken> tokens);
+    static std::pmr::unsynchronized_pool_resource memory_pool;
+    SigmaProgram* produceAst(std::vector<SigmaToken> tokens);
+
+    template<typename ValType, typename ...ArgsType>
+    static ValType* makeAst(ArgsType... args) {
+        void* mem = memory_pool.allocate(sizeof(ValType), alignof(ValType));
+        ValType* obj = new(mem)ValType(std::forward<ArgsType>(args)...);
+
+        return obj;
+    };
+    template<typename ValType>
+    static void freeAst(ValType** ptr){
+        memory_pool.deallocate(*ptr, sizeof(ValType), alignof(ValType));
+        *ptr = nullptr;
+    }
     
     Stmt parseStmt();
     Stmt parseVarDeclStmt();

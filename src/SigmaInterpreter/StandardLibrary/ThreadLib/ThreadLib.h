@@ -5,7 +5,7 @@
 
 class ThreadLib {
 public:
-    static std::shared_ptr<StructVal> getStruct();
+    static StructVal* getStruct();
 
     static RunTimeValue sleepCurrentThread(std::vector<RunTimeValue>& args);
     static RunTimeValue detachLambda(std::vector<RunTimeValue>& args);

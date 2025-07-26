@@ -3,16 +3,24 @@
 #include "SigmaLexer.h"
 #include <iostream>
 #include <memory>
+#include <memory_resource>
 #include <stdexcept>
 
-std::shared_ptr<SigmaProgram> SigmaParser::produceAst(std::vector<SigmaToken> tokens) {
+std::pmr::unsynchronized_pool_resource SigmaParser::memory_pool = std::pmr::unsynchronized_pool_resource();
+
+MemberAccessExpression* MemberAccessExpression::clone_expr(){
+    return SigmaParser::makeAst<MemberAccessExpression>(struct_expr, path);
+}
+
+
+SigmaProgram* SigmaParser::produceAst(std::vector<SigmaToken> tokens) {
     std::vector<Stmt> stmts;
     itr = tokens.begin();
 
     while(itr->type != ENDOFFILETOK)
         stmts.push_back(parseStmt());
 
-    return std::make_shared<SigmaProgram>(stmts);
+    return makeAst<SigmaProgram>(stmts);
 };
 
 Stmt SigmaParser::parseStmt() {
@@ -30,30 +38,30 @@ Stmt SigmaParser::parseStmt() {
             return parseForLoop();
         case Continue:
             advance();
-            return std::make_shared<ContinueStatement>();
+            return makeAst<ContinueStatement>();
         case Break:
             advance();
-            return std::make_shared<BreakStatement>();
+            return makeAst<BreakStatement>();
         case Return:{
             advance();
             Expr expr = parseExpr();
-            return std::make_shared<ReturnStatement>(expr);
+            return makeAst<ReturnStatement>(expr);
         }break;
         case Struct:
             return parseStructDeclerationStmt();
         default: { 
             Expr expr = parseExpr();
             if(expr->type == IndexAccessExpressionType && itr->type == Equal){
-                auto expression = std::dynamic_pointer_cast<IndexAccessExpression>(expr);
+                auto expression = dynamic_cast<IndexAccessExpression*>(expr);
                 advance(); // eat equal
                 auto express = parseExpr();
-                return std::make_shared<IndexReInitStatement>(expression->array_expr,
+                return makeAst<IndexReInitStatement>(expression->array_expr,
                     expression->path, express);
             } else if (expr->type == MemberAccessExpressionType && itr->type == Equal){
-                auto expression = std::dynamic_pointer_cast<MemberAccessExpression>(expr);
+                auto expression = dynamic_cast<MemberAccessExpression*>(expr);
                 advance(); // eat equal
                 auto express = parseExpr();
-                return std::make_shared<MemberReInitExpression>(expression->struct_expr,
+                return makeAst<MemberReInitExpression>(expression->struct_expr,
                     expression->path, express);
             } else if (itr->type == CompoundAssignmentOperator){
                 return parseCompoundAssignmentStmt(expr);
@@ -75,14 +83,14 @@ Stmt SigmaParser::parseVarDeclStmt() {
         expr = parseExpr();
     } else if(is_const) throw std::runtime_error("A Const Variable Must Be Initialized");
 
-    return std::make_shared<VariableDecleration>(name, expr, is_const);
+    return makeAst<VariableDecleration>(name, expr, is_const);
 };
 Stmt SigmaParser::parseVarReInitStmt() {
     const std::string var_name = advance().symbol;
     const SigmaToken eq = advance();
     const Expr expr = parseExpr();
 
-    return std::make_shared<VariableReInit>(var_name, expr);
+    return makeAst<VariableReInit>(var_name, expr);
 };
 
 Expr SigmaParser::parseExpr() { 
@@ -96,7 +104,7 @@ Expr SigmaParser::parseAddExpr() {
 
     while(itr->symbol == "+" || itr->symbol == "-"){
         std::string op = advance().symbol;
-        left = std::make_shared<BinaryExpression>(left, parseMulExpr(), op);
+        left = makeAst<BinaryExpression>(left, parseMulExpr(), op);
     }
 
     return left;
@@ -106,7 +114,7 @@ Expr SigmaParser::parseMulExpr() {
 
     while(itr->symbol == "*" || itr->symbol == "/" || itr->symbol == "%"){
         std::string op = advance().symbol;
-        left = std::make_shared<BinaryExpression>(left, parseCompExpr(), op);
+        left = makeAst<BinaryExpression>(left, parseCompExpr(), op);
     }
 
     return left;
@@ -117,7 +125,7 @@ Expr SigmaParser::parseCompExpr() {
     while(itr->symbol == "==" || itr->symbol == ">=" || itr->symbol == "<=" ||
         itr->symbol == "!=" || itr->symbol == ">" || itr->symbol == "<"){
         std::string op = advance().symbol;
-        left = std::make_shared<BinaryExpression>(left, parseBitWiseExpr(), op);
+        left = makeAst<BinaryExpression>(left, parseBitWiseExpr(), op);
     }
 
     return left;
@@ -151,7 +159,7 @@ Expr SigmaParser::parseBitWiseExpr() {
                 r = parseFunctionCall(r);
             }
     }
-        left = std::make_shared<BinaryExpression>(left, r, op);
+        left = makeAst<BinaryExpression>(left, r, op);
     }
 
     return left;
@@ -159,16 +167,16 @@ Expr SigmaParser::parseBitWiseExpr() {
 Expr SigmaParser::parsePrimaryExpr() {
     if(itr->symbol == "-"){
         advance();
-        return std::make_shared<NegativeExpression>(parseExpr());
+        return makeAst<NegativeExpression>(parseExpr());
     }
     switch (itr->type) {
         case Number:
-            return std::make_shared<NumericExpression>(std::stod(advance().symbol));
+            return makeAst<NumericExpression>(std::stod(advance().symbol));
         case Str:{
-            return std::make_shared<StringExpression>(advance().symbol);
+            return makeAst<StringExpression>(advance().symbol);
         }break;
-        case True: advance(); return std::make_shared<BoolExpression>(true);
-        case False: advance(); return std::make_shared<BoolExpression>(false);
+        case True: advance(); return makeAst<BoolExpression>(true);
+        case False: advance(); return makeAst<BoolExpression>(false);
         case OpenParen: {
             auto iterat = itr;
             iterat++;
@@ -184,7 +192,7 @@ Expr SigmaParser::parsePrimaryExpr() {
             return expr;
         }break;
         case Identifier:{
-            return std::make_shared<IdentifierExpression>(advance().symbol);
+            return makeAst<IdentifierExpression>(advance().symbol);
         }break;
         case OpenBracket:
             return parseArrayExpr();
@@ -192,10 +200,10 @@ Expr SigmaParser::parsePrimaryExpr() {
             return parseStructExpr();
         case Increment:
             advance();
-            return std::make_shared<IncrementExpression>(parseExpr(), 1);
+            return makeAst<IncrementExpression>(parseExpr(), 1);
         case Decrement:
             advance();
-            return std::make_shared<IncrementExpression>(parseExpr() , -1);
+            return makeAst<IncrementExpression>(parseExpr() , -1);
         case Negative:
         default: throw std::runtime_error("Expression Type Not Implemented " + std::to_string(itr->type));
     }
@@ -219,7 +227,7 @@ Expr SigmaParser::parseLambdaExpr() {
     while(itr->type != CloseBrace)
         stmts.push_back(parseStmt());
     advance();
-    return std::make_shared<LambdaExpression>(strs, stmts);
+    return makeAst<LambdaExpression>(strs, stmts);
 };
 Expr SigmaParser::parseFunctionCall(Expr expr) {
     const SigmaToken open_paren = advance();
@@ -234,7 +242,7 @@ Expr SigmaParser::parseFunctionCall(Expr expr) {
 
     const SigmaToken close_paren = advance();
 
-    return std::make_shared<FunctionCallExpression>(expr, exprs);
+    return makeAst<FunctionCallExpression>(expr, exprs);
 };
 
 Expr SigmaParser::parseArrayExpr() {
@@ -247,7 +255,7 @@ Expr SigmaParser::parseArrayExpr() {
     }
     advance();
 
-    return std::make_shared<ArrayExpression>(exprs);
+    return makeAst<ArrayExpression>(exprs);
 }
 
 Expr SigmaParser::parseIndexExpr(Expr arr) {
@@ -258,7 +266,7 @@ Expr SigmaParser::parseIndexExpr(Expr arr) {
         advance();
     }
 
-    return std::make_shared<IndexAccessExpression>(arr, path);
+    return makeAst<IndexAccessExpression>(arr, path);
 }
 
 Stmt SigmaParser::parseIndexReInitStmt(Expr arr) {
@@ -271,7 +279,7 @@ Stmt SigmaParser::parseIndexReInitStmt(Expr arr) {
     advance(); // eat equal
     Expr val = parseExpr();
 
-    return std::make_shared<IndexReInitStatement>(arr, path, val);
+    return makeAst<IndexReInitStatement>(arr, path, val);
 }
 
 Stmt SigmaParser::parseIfStmt() {
@@ -284,7 +292,7 @@ Stmt SigmaParser::parseIfStmt() {
     }
     advance();
 
-    std::vector<std::shared_ptr<ElseIfStatement>> else_if_stmts;
+    std::vector<ElseIfStatement*> else_if_stmts;
     while(itr->type == ElseIf){
         advance(); // eat elseif
         Expr expr = parseExpr();
@@ -295,9 +303,9 @@ Stmt SigmaParser::parseIfStmt() {
         }
         advance();
 
-        else_if_stmts.push_back(std::make_shared<ElseIfStatement>(expr, statements));
+        else_if_stmts.push_back(makeAst<ElseIfStatement>(expr, statements));
     }
-    std::shared_ptr<ElseStatement> else_stmt;
+    ElseStatement* else_stmt;
 
     if(itr->type == Else){
         advance(); // through the else
@@ -308,10 +316,10 @@ Stmt SigmaParser::parseIfStmt() {
         }
         advance();
 
-        else_stmt = std::make_shared<ElseStatement>(stmtss);
+        else_stmt = makeAst<ElseStatement>(stmtss);
     }
 
-    return std::make_shared<IfStatement>(expr, stmts, else_if_stmts, else_stmt);
+    return makeAst<IfStatement>(expr, stmts, else_if_stmts, else_stmt);
 };
 Stmt SigmaParser::parseWhileLoop() {
     advance(); // eat while
@@ -323,7 +331,7 @@ Stmt SigmaParser::parseWhileLoop() {
     }
     advance();
 
-    return std::make_shared<WhileLoopStatement>(expr, stmts);
+    return makeAst<WhileLoopStatement>(expr, stmts);
 };
 Stmt SigmaParser::parseForLoop() {
     advance(); // eat for
@@ -349,23 +357,23 @@ Stmt SigmaParser::parseForLoop() {
     }
     advance();
 
-    return std::make_shared<ForLoopStatement>(expr, stmts, first_stmt, last_stmt);
+    return makeAst<ForLoopStatement>(expr, stmts, first_stmt, last_stmt);
 };
 
 Stmt SigmaParser::parseStructDeclerationStmt(){
     advance(); // through "struct"
     std::string struct_iden = advance().symbol;
     advance(); // through {
-    std::vector<std::shared_ptr<VariableDecleration>> propss;
+    std::vector<VariableDecleration*> propss;
     while(itr->type != CloseBrace){
-        propss.push_back(std::dynamic_pointer_cast<VariableDecleration>(parseStmt()));
+        propss.push_back(dynamic_cast<VariableDecleration*>(parseStmt()));
         if(itr->type == Comma)
             advance();
         else break;
     }
     advance(); // through }
     
-    return std::make_shared<StructDeclerationStatement>(struct_iden, propss);
+    return makeAst<StructDeclerationStatement>(struct_iden, propss);
 };
 
 Expr SigmaParser::parseStructExpr(){
@@ -382,7 +390,7 @@ Expr SigmaParser::parseStructExpr(){
 
     const SigmaToken close_paren = advance();
 
-    return std::make_shared<StructExpression>(stru_name, exprs);
+    return makeAst<StructExpression>(stru_name, exprs);
 };
 
 Expr SigmaParser::parseMemberAccessExpr(Expr struc) {
@@ -393,11 +401,11 @@ Expr SigmaParser::parseMemberAccessExpr(Expr struc) {
         path.push_back(advance().symbol);
     }
 
-    return std::make_shared<MemberAccessExpression>(struc, path);
+    return makeAst<MemberAccessExpression>(struc, path);
 };
 
 Stmt SigmaParser::parseCompoundAssignmentStmt(Expr targ_expr) {
     std::string op = advance().symbol;
     Expr val = parseExpr();
-    return std::make_shared<CompoundAssignmentStatement>(targ_expr, op, val);
+    return makeAst<CompoundAssignmentStatement>(targ_expr, op, val);
 };

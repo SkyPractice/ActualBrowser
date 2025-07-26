@@ -110,6 +110,8 @@ public:
                     std::cout << "Successfully parsed" << std::endl;
                     scripting_interpreter.accessor = &accessor;
                     auto result = scripting_interpreter.evaluate(ast);
+                    SigmaParser::memory_pool.release();
+                    RunTimeMemory::pool.release();
                 }
             }
         }

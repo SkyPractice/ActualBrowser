@@ -26,8 +26,8 @@ public:
 
 class SigmaProgram : public Statement {
 public:
-    std::vector<std::shared_ptr<Statement>> stmts;
-    SigmaProgram (std::vector<std::shared_ptr<Statement>> statements): Statement(ProgramType),
+    std::vector<Statement*> stmts;
+    SigmaProgram (std::vector<Statement*> statements): Statement(ProgramType),
         stmts(std::move(statements)) {};
 };
 
@@ -38,11 +38,11 @@ public:
 
 class BinaryExpression : public Expression {
 public:
-    std::shared_ptr<Expression> left;
-    std::shared_ptr<Expression> right;
+    Expression* left;
+    Expression* right;
     std::string op;
 
-    BinaryExpression(std::shared_ptr<Expression> l, std::shared_ptr<Expression> r, std::string oper):
+    BinaryExpression(Expression* l, Expression* r, std::string oper):
         Expression(BinaryExpressionType), left(l), right(r), op(oper) {};
 };
 
@@ -50,14 +50,14 @@ class StringExpression : public Expression {
 public:
     std::string str;
 
-    StringExpression(std::string stri): Expression(StringExpressionType), str(stri) {};
+    StringExpression(std::string stri): Expression(StringExpressionType), str(std::move(stri)) {};
 };
 
 class IdentifierExpression : public Expression {
 public:
     std::string str;
 
-    IdentifierExpression(std::string stri): Expression(IdentifierExpressionType), str(stri) {};
+    IdentifierExpression(std::string stri): Expression(IdentifierExpressionType), str(std::move(stri)) {};
 };
 
 class NumericExpression : public Expression {
@@ -77,29 +77,29 @@ public:
 class StructExpression : public Expression {
 public:
     std::string struct_name;
-    std::vector<std::shared_ptr<Expression>> args;
+    std::vector<Expression*> args;
 
-    StructExpression(std::string name, std::vector<std::shared_ptr<Expression>> arguments):
+    StructExpression(std::string name, std::vector<Expression*> arguments):
         Expression(StructExpressionType), struct_name(name), args(arguments) {};
 };
 
 class VariableDecleration : public Expression {
 public:
     std::string var_name;
-    std::shared_ptr<Expression> expr;
+    Expression* expr;
     bool is_const;
 
-    VariableDecleration(std::string name, std::shared_ptr<Expression> val, bool is_constant):
+    VariableDecleration(std::string name, Expression* val, bool is_constant):
         Expression(VariableDeclerationType), var_name(name), expr(val), is_const(is_constant) {};
 };
 
 class VariableReInit : public Expression {
 public:
     std::string var_name;
-    std::shared_ptr<Expression> expr;
+    Expression* expr;
 
-    VariableReInit(std::string name, std::shared_ptr<Expression> val):
-        Expression(VariableReInitializationType), var_name(name), expr(val) {};
+    VariableReInit(std::string name, Expression* val):
+        Expression(VariableReInitializationType), var_name(std::move(name)), expr(val) {};
 };
 
 class EnumDecleration : public Statement {
@@ -119,106 +119,106 @@ public:
 
 class ElseStatement : public Statement {
 public:
-    std::vector<std::shared_ptr<Statement>> stmts;
+    std::vector<Statement*> stmts;
 
-    ElseStatement(std::vector<std::shared_ptr<Statement>> statements):
+    ElseStatement(std::vector<Statement*> statements):
         Statement(ElseStatementType), stmts(statements) {};
 };
 
 class ElseIfStatement : public Statement {
 public:
-    std::shared_ptr<Expression> expr;
-    std::vector<std::shared_ptr<Statement>> stmts;
+    Expression* expr;
+    std::vector<Statement*> stmts;
 
-    ElseIfStatement(std::shared_ptr<Expression> expression, 
-        std::vector<std::shared_ptr<Statement>> statements): Statement(ElseIfStatementType),
+    ElseIfStatement(Expression* expression, 
+        std::vector<Statement*> statements): Statement(ElseIfStatementType),
         expr(expression), stmts(statements) {};
 };
 
 class IfStatement : public Statement {
 public:
-    std::shared_ptr<Expression> expr;
-    std::vector<std::shared_ptr<Statement>> stmts;
-    std::vector<std::shared_ptr<ElseIfStatement>> else_if_stmts;
-    std::shared_ptr<ElseStatement> else_stmt;
+    Expression* expr;
+    std::vector<Statement*> stmts;
+    std::vector<ElseIfStatement*> else_if_stmts;
+    ElseStatement* else_stmt;
 
-    IfStatement(std::shared_ptr<Expression> expression, 
-        std::vector<std::shared_ptr<Statement>> statements,std::vector<std::shared_ptr<ElseIfStatement>>
-         else_if_stmts_arg, std::shared_ptr<ElseStatement> else_stmt_arg): Statement(IfStatementType),
+    IfStatement(Expression* expression, 
+        std::vector<Statement*> statements,std::vector<ElseIfStatement*>
+         else_if_stmts_arg, ElseStatement* else_stmt_arg): Statement(IfStatementType),
         expr(expression), stmts(statements), else_if_stmts(else_if_stmts_arg),
         else_stmt(else_stmt_arg) {};
 };
 
 class WhileLoopStatement : public Statement {
 public:
-    std::shared_ptr<Expression> expr;
-    std::vector<std::shared_ptr<Statement>> stmts;
+    Expression* expr;
+    std::vector<Statement*> stmts;
 
-    WhileLoopStatement(std::shared_ptr<Expression> expression, 
-        std::vector<std::shared_ptr<Statement>> statements): Statement(WhileStatementType),
+    WhileLoopStatement(Expression* expression, 
+        std::vector<Statement*> statements): Statement(WhileStatementType),
         expr(expression), stmts(statements) {};
 };
 
 class ForLoopStatement : public Statement {
 public:
-    std::shared_ptr<Statement> first_stmt;
-    std::shared_ptr<Expression> expr;
-    std::shared_ptr<Statement> last_stmt;
-    std::vector<std::shared_ptr<Statement>> stmts;
+    Statement* first_stmt;
+    Expression* expr;
+    Statement* last_stmt;
+    std::vector<Statement*> stmts;
 
-    ForLoopStatement(std::shared_ptr<Expression> expression, 
-        std::vector<std::shared_ptr<Statement>> statements,
-    std::shared_ptr<Statement> first_statement, std::shared_ptr<Statement> last_statement)
+    ForLoopStatement(Expression* expression, 
+        std::vector<Statement*> statements,
+    Statement* first_statement, Statement* last_statement)
     : Statement(ForStatementType),
     expr(expression), stmts(statements), first_stmt(first_statement), last_stmt(last_statement) {};
 };
 
 class ArrayExpression : public Expression {
 public:
-    std::vector<std::shared_ptr<Expression>> exprs;
+    std::vector<Expression*> exprs;
 
-    ArrayExpression(std::vector<std::shared_ptr<Expression>> expressions): Expression(ArrayExpressionType),
+    ArrayExpression(std::vector<Expression*> expressions): Expression(ArrayExpressionType),
         exprs(expressions) {};
 };
 
 class LambdaExpression : public Expression {
 public:
     std::vector<std::string> params;
-    std::vector<std::shared_ptr<Statement>> stmts;
+    std::vector<Statement*> stmts;
 
     LambdaExpression(std::vector<std::string> parameters,
-        std::vector<std::shared_ptr<Statement>> statements):
+        std::vector<Statement*> statements):
         Expression(LambdaExpressionType), params(parameters), stmts(statements) {};
 };
 
 class FunctionCallExpression : public Expression {
 public:
-    std::shared_ptr<Expression> func_expr;
-    std::vector<std::shared_ptr<Expression>> args;
+    Expression* func_expr;
+    std::vector<Expression*> args;
 
-    FunctionCallExpression(std::shared_ptr<Expression> expr, std::vector<std::shared_ptr<Expression>> arguments):
+    FunctionCallExpression(Expression* expr, std::vector<Expression*> arguments):
         Expression(FunctionCallExpressionType), func_expr(expr), args(arguments) {};
 };
 
 class IndexAccessExpression : public Expression {
 public:
-    std::shared_ptr<Expression> array_expr;
-    std::vector<std::shared_ptr<Expression>> path;
+    Expression* array_expr;
+    std::vector<Expression*> path;
 
-    IndexAccessExpression(std::shared_ptr<Expression> array_expression,
-        std::vector<std::shared_ptr<Expression>> access_path): Expression(IndexAccessExpressionType),
+    IndexAccessExpression(Expression* array_expression,
+        std::vector<Expression*> access_path): Expression(IndexAccessExpressionType),
         array_expr(array_expression), path(access_path) {};
 };
 
 class IndexReInitStatement : public Statement {
 public:
-    std::shared_ptr<Expression> array_expr;
-    std::vector<std::shared_ptr<Expression>> path;
-    std::shared_ptr<Expression> val;
+    Expression* array_expr;
+    std::vector<Expression*> path;
+    Expression* val;
 
-    IndexReInitStatement(std::shared_ptr<Expression> array_expression,
-        std::vector<std::shared_ptr<Expression>> access_path,
-        std::shared_ptr<Expression> value): Statement(IndexReInitStatementType),
+    IndexReInitStatement(Expression* array_expression,
+        std::vector<Expression*> access_path,
+        Expression* value): Statement(IndexReInitStatementType),
         array_expr(array_expression), path(access_path), val(value) {};
 };
 
@@ -234,78 +234,79 @@ public:
 
 class ReturnStatement : public Statement {
 public:
-    std::shared_ptr<Expression> expr;
-    ReturnStatement(std::shared_ptr<Expression> expression): Statement(ReturnStatementType),
+    Expression* expr;
+    ReturnStatement(Expression* expression): Statement(ReturnStatementType),
         expr(expression) {};
 };
 
 class StructDeclerationStatement : public Statement {
 public:
     std::string struct_name;
-    std::vector<std::shared_ptr<VariableDecleration>> props;
+    std::vector<VariableDecleration*> props;
 
-    StructDeclerationStatement(std::string struc_name, std::vector<std::shared_ptr<VariableDecleration>> properties):
+    StructDeclerationStatement(std::string struc_name, std::vector<VariableDecleration*> properties):
         Statement(StructDeclerationType), struct_name(struc_name), props(properties) {};
 };
 
 class MemberAccessExpression : public Expression {
 public:
-    std::shared_ptr<Expression> struct_expr;
+    Expression* struct_expr;
     std::vector<std::string> path;
 
-    MemberAccessExpression(std::shared_ptr<Expression> expr,
+    MemberAccessExpression(Expression* expr,
         std::vector<std::string> p): Expression(MemberAccessExpressionType), struct_expr(expr),
         path(p) {};
-    std::shared_ptr<MemberAccessExpression> clone_expr(){
-        return std::make_shared<MemberAccessExpression>(struct_expr, path);
-    }
+    MemberAccessExpression* clone_expr();
 };
 
 class MemberReInitExpression : public Expression {
 public:
-    std::shared_ptr<Expression> struct_expr;
+    Expression* struct_expr;
     std::vector<std::string> path;
-    std::shared_ptr<Expression> val;
+    Expression* val;
 
-    MemberReInitExpression(std::shared_ptr<Expression> expr, std::vector<std::string> vec, 
-        std::shared_ptr<Expression> v): Expression(MemberReInitExpressionType),
+    MemberReInitExpression(Expression* expr, std::vector<std::string> vec, 
+        Expression* v): Expression(MemberReInitExpressionType),
         struct_expr(expr), path(vec), val(v) {};
 };
 
 class IncrementExpression : public Expression {
 public:
-    std::shared_ptr<Expression> expr;
+    Expression* expr;
+    VariableReInit* cached_variable_reinit = nullptr;
+    MemberReInitExpression* cached_member_reinit = nullptr;
+    IndexReInitStatement* cached_index_reinit = nullptr;
     double amount;
 
-    IncrementExpression(std::shared_ptr<Expression> actual_expr,
+    IncrementExpression(Expression* actual_expr,
         double amou): Expression(IncrementExpressionType),
         expr(actual_expr), amount(amou) {};
 };
 
 class DecrementExpression : public Expression {
 public:
-    std::shared_ptr<Expression> expr;
+    Expression* expr;
 
-    DecrementExpression(std::shared_ptr<Expression> actual_expr):
+    DecrementExpression(Expression* actual_expr):
         Expression(DecrementExpressionType),
         expr(actual_expr) {};
 };
 
 class CompoundAssignmentStatement : public Statement {
 public:
-    std::shared_ptr<Expression> expr;
-    std::shared_ptr<Expression> amount;
+    Expression* expr;
+    Expression* amount;
     std::string oper;
 
-    CompoundAssignmentStatement(std::shared_ptr<Expression> exprr, std::string op,
-        std::shared_ptr<Expression> actual_amount): Statement(CompoundAssignmentStatementType),
+    CompoundAssignmentStatement(Expression* exprr, std::string op,
+        Expression* actual_amount): Statement(CompoundAssignmentStatementType),
         expr(exprr), amount(actual_amount), oper(op) {};
 };
 
 class NegativeExpression : public Expression {
 public:
-    std::shared_ptr<Expression> expr;
+    Expression* expr;
 
-    NegativeExpression(std::shared_ptr<Expression> actual_expr): Expression(NegativeExpressionType),
+    NegativeExpression(Expression* actual_expr): Expression(NegativeExpressionType),
         expr(actual_expr) {};
 };

@@ -4,8 +4,6 @@
 #include <string_view>
 #include <unordered_map>
 
-typedef std::shared_ptr<RunTimeVal> RunTimeValue;
-
 namespace ConsoleColors {
 
     using namespace std::literals::string_view_literals;
@@ -34,7 +32,7 @@ class ConsoleLib {
 public:
     static std::unordered_map<std::string_view, std::string_view> colorMap;
 
-    static std::shared_ptr<StructVal> getStruct();
+    static StructVal* getStruct();
 
     static RunTimeValue print(std::vector<RunTimeValue>& args);
     static RunTimeValue println(std::vector<RunTimeValue>& args);

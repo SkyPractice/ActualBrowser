@@ -3,12 +3,12 @@
 
 std::shared_ptr<Scope> StdLib::current_calling_scope = nullptr;
 
-void StdLibInitializer::declareStdLibMemberInScope(std::string struct_name, std::shared_ptr<RunTimeVal> struct_val,
-    std::shared_ptr<Scope> target_scope) {
+void StdLibInitializer::declareStdLibMemberInScope(std::string struct_name, RunTimeVal* struct_val,
+    Scope* target_scope) {
     target_scope->declareVar(struct_name, { struct_val, true });
 };
 
-void StdLib::addValToStruct(std::shared_ptr<StructVal> target_struct, std::string name,
-    std::shared_ptr<RunTimeVal> val) {
+void StdLib::addValToStruct(StructVal* target_struct, std::string name,
+    RunTimeVal* val) {
     target_struct->vals.insert({name, val});
 };

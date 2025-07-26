@@ -17,8 +17,8 @@ std::unordered_map<std::string_view, std::string_view> ConsoleLib::colorMap = {
         {"bg_cyan", ConsoleColors::BG_CYAN}, {"bg_white", ConsoleColors::BG_WHITE}
 };
 
-std::shared_ptr<StructVal> ConsoleLib::getStruct() {
-    std::unordered_map<std::string, std::shared_ptr<RunTimeVal>> vals = {
+StructVal* ConsoleLib::getStruct() {
+    std::unordered_map<std::string, RunTimeVal*> vals = {
         {"println", RunTimeFactory::makeNativeFunction(&ConsoleLib::println)},
         {"print", RunTimeFactory::makeNativeFunction(&ConsoleLib::print)},
         {"input", RunTimeFactory::makeNativeFunction(&ConsoleLib::input)}
@@ -30,30 +30,30 @@ RunTimeValue ConsoleLib::println(std::vector<RunTimeValue>& args){
 
     std::string choosen_clr = "white";
     if(args.size() > 1){
-        choosen_clr = std::dynamic_pointer_cast<StringVal>(args[1])->str;
+        choosen_clr = dynamic_cast<StringVal*>(args[1])->str;
     }
 
     std::cout << colorMap.at(choosen_clr) << 
-        std::dynamic_pointer_cast<StringVal>(args[0])->str << ConsoleColors::RESET << std::endl;
+        dynamic_cast<StringVal*>(args[0])->str << ConsoleColors::RESET << std::endl;
 
     return RunTimeFactory::makeNum(std::accumulate(args.begin(), args.end(), 0,
         [](size_t current_total_size, RunTimeValue second) {
             return current_total_size +
-                std::dynamic_pointer_cast<StringVal>(second)->str.size();
+                dynamic_cast<StringVal*>(second)->str.size();
         }) + 1);
 };
 RunTimeValue ConsoleLib::print(std::vector<RunTimeValue>& args){
     std::string choosen_clr = "white";
     if(args.size() > 1){
-        choosen_clr = std::dynamic_pointer_cast<StringVal>(args[1])->str;
+        choosen_clr = dynamic_cast<StringVal*>(args[1])->str;
     }
 
     std::cout << colorMap.at(choosen_clr) << 
-        std::dynamic_pointer_cast<StringVal>(args[0])->str << ConsoleColors::RESET << std::flush;
+        dynamic_cast<StringVal*>(args[0])->str << ConsoleColors::RESET << std::flush;
     return RunTimeFactory::makeNum(std::accumulate(args.begin(), args.end(), 0,
         [](size_t current_total_size, RunTimeValue second) {
             return current_total_size +
-                std::dynamic_pointer_cast<StringVal>(second)->str.size();
+                dynamic_cast<StringVal*>(second)->str.size();
         }));
 };
 

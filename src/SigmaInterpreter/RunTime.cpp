@@ -7,81 +7,81 @@
 
 std::pmr::unsynchronized_pool_resource RunTimeMemory::pool;
 
-std::shared_ptr<NumVal> RunTimeFactory::makeNum(double num) {
+NumVal* RunTimeFactory::makeNum(double num) {
     return makeVal<NumVal>(num);
 };
-std::shared_ptr<StringVal> RunTimeFactory::makeString(std::string str) {
+StringVal* RunTimeFactory::makeString(std::string str) {
     return makeVal<StringVal>(std::move(str));
 };
-std::shared_ptr<ArrayVal> RunTimeFactory::makeArray(std::vector<std::shared_ptr<RunTimeVal>> vec){
+ArrayVal* RunTimeFactory::makeArray(std::vector<RunTimeVal*> vec){
     return makeVal<ArrayVal>(std::move(vec));
 };
-std::shared_ptr<StructVal> RunTimeFactory::makeStruct(std::unordered_map<std::string,
-    std::shared_ptr<RunTimeVal>> vals) {
+StructVal* RunTimeFactory::makeStruct(std::unordered_map<std::string,
+    RunTimeVal*> vals) {
     return makeVal<StructVal>(std::move(vals));
 };
-std::shared_ptr<ReturnVal> RunTimeFactory::makeReturn(std::shared_ptr<RunTimeVal> val) {
+ReturnVal* RunTimeFactory::makeReturn(RunTimeVal* val) {
     return makeVal<ReturnVal>(std::move(val));
 };
-std::shared_ptr<BreakVal> RunTimeFactory::makeBreak() {
+BreakVal* RunTimeFactory::makeBreak() {
     return makeVal<BreakVal>();
 };
-std::shared_ptr<ContinueVal> RunTimeFactory::makeContinue() {
+ContinueVal* RunTimeFactory::makeContinue() {
     return makeVal<ContinueVal>();
 };
 
-std::shared_ptr<BoolVal> RunTimeFactory::makeBool(bool boolean) {
+BoolVal* RunTimeFactory::makeBool(bool boolean) {
     return makeVal<BoolVal>(boolean);
 };
 
-std::shared_ptr<LambdaVal> RunTimeFactory::makeLambda(std::vector<std::string> params, 
-    std::vector<std::shared_ptr<Statement>> stmts, std::unordered_map<std::string, 
-        std::shared_ptr<RunTimeVal>> captured) {
+LambdaVal* RunTimeFactory::makeLambda(std::vector<std::string> params, 
+    std::vector<Statement*> stmts, std::unordered_map<std::string, 
+        RunTimeVal*> captured) {
     return makeVal<LambdaVal>(std::move(params), std::move(stmts), std::move(captured));
 };
 
-std::shared_ptr<NativeFunctionVal> RunTimeFactory::makeNativeFunction(
+NativeFunctionVal* RunTimeFactory::makeNativeFunction(
         NativeFunctionVal::FuncType func
 ){
     return makeVal<NativeFunctionVal>(std::move(func));
 };
 
-std::shared_ptr<RefrenceVal> RunTimeFactory::makeRefrence(std::shared_ptr<RunTimeVal> *val){
+RefrenceVal* RunTimeFactory::makeRefrence(RunTimeVal** val){
     return makeVal<RefrenceVal>(val);
 }
 
-std::shared_ptr<RunTimeVal> NumVal::clone() { return RunTimeFactory::makeNum(num); };
-std::shared_ptr<RunTimeVal> StringVal::clone() { return RunTimeFactory::makeString(str); };
-std::shared_ptr<RunTimeVal> CharVal::clone() { return nullptr; };
-std::shared_ptr<RunTimeVal> BoolVal::clone() { return RunTimeFactory::makeBool(boolean); };
-std::shared_ptr<RunTimeVal> LambdaVal::clone() { return RunTimeFactory::makeLambda(params,
+RunTimeVal* NumVal::clone() { return RunTimeFactory::makeNum(num); };
+RunTimeVal* StringVal::clone() { return RunTimeFactory::makeString(str); };
+RunTimeVal* CharVal::clone() { return nullptr; };
+RunTimeVal* BoolVal::clone() { return RunTimeFactory::makeBool(boolean); };
+RunTimeVal* LambdaVal::clone() { return RunTimeFactory::makeLambda(params,
      stmts, captured); };
-std::shared_ptr<RunTimeVal> ArrayVal::clone() { 
-    std::vector<std::shared_ptr<RunTimeVal>> new_arr(vals.size());
+RunTimeVal* ArrayVal::clone() { 
+    std::vector<RunTimeVal*> new_arr(vals.size());
     std::transform(vals.begin(), vals.end(), new_arr.begin(),
-     [&](std::shared_ptr<RunTimeVal>& val){
+     [&](RunTimeVal* val){
         return val->clone();
     });
     return RunTimeFactory::makeArray(new_arr); };
-std::shared_ptr<RunTimeVal> StructVal::clone() { 
-    std::unordered_map<std::string, std::shared_ptr<RunTimeVal>> valss;
+RunTimeVal* StructVal::clone() { 
+    std::unordered_map<std::string, RunTimeVal*> valss;
     for(auto& [val_name, value] : vals){
         valss.insert({val_name, value->clone() });
     }
     return RunTimeFactory::makeStruct(valss); };
-std::shared_ptr<RunTimeVal> ReturnVal::clone() { return RunTimeFactory::makeReturn(val->clone()); };
-std::shared_ptr<RunTimeVal> BreakVal::clone() { return RunTimeFactory::makeBreak(); };
-std::shared_ptr<RunTimeVal> ContinueVal::clone() { return RunTimeFactory::makeContinue(); };
-std::shared_ptr<RunTimeVal> RefrenceVal::clone() { return RunTimeFactory::makeRefrence(val); };
-std::shared_ptr<RunTimeVal> NativeFunctionVal::clone() { return shared_from_this(); };
+RunTimeVal* ReturnVal::clone() { return RunTimeFactory::makeReturn(val->clone()); };
+RunTimeVal* BreakVal::clone() { return RunTimeFactory::makeBreak(); };
+RunTimeVal* ContinueVal::clone() { return RunTimeFactory::makeContinue(); };
+RunTimeVal* RefrenceVal::clone() { return RunTimeFactory::makeRefrence(val); };
+RunTimeVal* NativeFunctionVal::clone() { return this; };
 
-std::shared_ptr<BinaryVal> RunTimeFactory::makeBinary(
+BinaryVal* RunTimeFactory::makeBinary(
     std::vector<unsigned char> d
 ) {
     return makeVal<BinaryVal>(std::move(d));
 };
 
-std::shared_ptr<RunTimeVal> BinaryVal::clone() {
+RunTimeVal* BinaryVal::clone() {
     return RunTimeFactory::makeBinary(binary_data);
 }
 
@@ -94,6 +94,6 @@ std::string BinaryVal::getString(){
     return sstrea.str();
 }
 
-std::shared_ptr<HtmlElementVal> RunTimeFactory::makeHtmlElement(std::shared_ptr<HTMLTag> tag) {
+HtmlElementVal* RunTimeFactory::makeHtmlElement(HTMLTag* tag) {
     return makeVal<HtmlElementVal>(tag);
 };

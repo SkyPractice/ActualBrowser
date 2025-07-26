@@ -18,7 +18,7 @@
 #include "../Interpreter/Parser.h"
 #include "Cryptography.h"
 
-
+typedef RunTimeVal* RunTimeValue;
 
 RunTimeValue SigmaInterpreter::toString(std::vector<RunTimeValue>& args) {
     if(args.size() > 0){
@@ -45,15 +45,15 @@ RunTimeValue SigmaInterpreter::getCurrentTimeMillis(std::vector<RunTimeValue>& a
 
 
 RunTimeValue SigmaInterpreter::getElementById(std::vector<RunTimeValue>& args) {
-    std::string id = std::dynamic_pointer_cast<StringVal>(args[0])->str;
-    return RunTimeFactory::makeHtmlElement(accessor->id_ptrs.at(id));
+    std::string id = dynamic_cast<StringVal*>(args[0])->str;
+    return RunTimeFactory::makeHtmlElement(accessor->id_ptrs.at(id).get());
 };
 RunTimeValue SigmaInterpreter::setElementInnerHtml(std::vector<RunTimeValue>& args){
-    auto html_elm = std::dynamic_pointer_cast<HtmlElementVal>(args[0]);
+    auto html_elm = dynamic_cast<HtmlElementVal*>(args[0]);
     Lexer lex;
     Parser pars;
     Interpreter interpret;
-    std::string html_str = std::dynamic_pointer_cast<StringVal>(args[1])->str;
+    std::string html_str = dynamic_cast<StringVal*>(args[1])->str;
     
     auto tokens = lex.tokenize(html_str);
     auto ast_val = pars.produceAst(tokens);
@@ -66,20 +66,20 @@ RunTimeValue SigmaInterpreter::setElementInnerHtml(std::vector<RunTimeValue>& ar
 };
 
 RunTimeValue SigmaInterpreter::getElementsByClassName(std::vector<RunTimeValue>& args) {
-    std::string cl = std::dynamic_pointer_cast<StringVal>(args[0])->str;
+    std::string cl = dynamic_cast<StringVal*>(args[0])->str;
     auto elms = accessor->class_name_ptrs.equal_range(cl);
     auto [beg_itr, end_itr] = elms;
 
     std::vector<RunTimeValue> results;
     for(auto itr = beg_itr; itr != end_itr; itr++){
-        results.push_back(RunTimeFactory::makeHtmlElement(itr->second));
+        results.push_back(RunTimeFactory::makeHtmlElement(itr->second.get()));
     }
 
     return RunTimeFactory::makeArray(results);
 };
 
 RunTimeValue SigmaInterpreter::
-    evaluateAnonymousLambdaCall(std::shared_ptr<LambdaVal> lambda, std::vector<RunTimeValue> args){
+    evaluateAnonymousLambdaCall(LambdaVal* lambda, std::vector<RunTimeValue> args){
     auto actual_func = lambda;
     
     auto last_scope = current_scope;
@@ -105,7 +105,7 @@ RunTimeValue SigmaInterpreter::
       if (!val)
         continue;
       if (val->type == ReturnType) {
-        return_val = std::dynamic_pointer_cast<ReturnVal>(val)->val;
+        return_val = dynamic_cast<ReturnVal*>(val)->val;
         break;
       }
     }

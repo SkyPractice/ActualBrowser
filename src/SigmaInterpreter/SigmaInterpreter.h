@@ -9,12 +9,8 @@
 #include <unordered_set>
 #include <vector>
 
-typedef std::shared_ptr<Statement> Stmt;
-typedef std::shared_ptr<Expression> Expr;
-typedef std::shared_ptr<RunTimeVal> RunTimeValue;
-
 struct Variable {
-    RunTimeValue value;
+    RunTimeVal* value;
     bool is_const;
 };
 
@@ -24,19 +20,26 @@ class Scope : public std::enable_shared_from_this<Scope>{
 public: 
     std::shared_ptr<Scope> parent;
     std::unordered_map<std::string, Variable> variables;
+    std::unordered_map<std::string, Scope*> cache;
 
     Scope(std::shared_ptr<Scope> p): parent(p) {};
 
-    std::shared_ptr<Scope> traverse(std::string var_name){
+    std::shared_ptr<Scope> traverse(std::string& var_name){
         if(variables.contains(var_name)) return shared_from_this();
         else if (parent) return parent->traverse(var_name);
         return nullptr;
     };
 
-    RunTimeValue& getVal(std::string var_name){
-        auto scope = traverse(var_name);
-        if(!scope){ throw std::runtime_error("variable " + var_name + " not found"); };
-        return scope->variables[var_name].value;
+    RunTimeVal* getVal(std::string& var_name){
+        auto itr = cache.find(var_name);
+        bool result = (itr != cache.end());
+        if(!result){
+            auto scope = traverse(var_name);
+            if(!scope){ throw std::runtime_error("variable " + var_name + " not found"); };
+            cache.insert({ var_name, scope.get() });
+            return scope->variables[var_name].value;
+        }
+        return itr->second->variables.find(var_name)->second.value;
     };
 
     // shadowing is allowed
@@ -44,18 +47,27 @@ public:
         variables[name] = val;
     };
 
-    void reInitVar(std::string name, std::shared_ptr<RunTimeVal> val){
-        auto scope = traverse(name);
-        if(!scope) { throw std::runtime_error("identifier " + name + " not found"); };
-        if(scope->variables[name].is_const) { throw std::runtime_error("Can't ReInitialize A Variable Marked As A Const"); };
-        scope->variables[name].value = val;
+    void reInitVar(std::string& name, RunTimeVal* val){
+        auto itr = cache.find(name);
+        bool result = (itr != cache.end());
+        if(!result){
+            auto scope = traverse(name);
+            if(!scope) { throw std::runtime_error("identifier " + name + " not found"); };
+            auto& another_v = scope->variables.find(name)->second;
+            if(another_v.is_const) { throw std::runtime_error("Can't ReInitialize A Variable Marked As A Const"); };
+            another_v.value = val;
+            cache.insert({name, scope.get()});
+        }
+        auto& current_var = itr->second->variables.find(name)->second;
+        if(current_var.is_const) { throw std::runtime_error("Can't ReInitialize A Variable Marked As A Const"); };
+        current_var.value = val;
     }
 
-    std::unordered_map<std::string, RunTimeValue> flatten(){
-        std::vector<std::pair<std::string, RunTimeValue>> actual_vec;
+    std::unordered_map<std::string, RunTimeVal*> flatten(){
+        std::vector<std::pair<std::string, RunTimeVal*>> actual_vec;
         flatten_recursively(actual_vec);
 
-        std::unordered_map<std::string, RunTimeValue> hash_map;
+        std::unordered_map<std::string, RunTimeVal*> hash_map;
 
         for(auto& [var_name, var_val] : actual_vec){
             hash_map.insert({var_name, var_val});
@@ -64,7 +76,7 @@ public:
         return hash_map;
     }
 
-    void flatten_recursively(std::vector<std::pair<std::string, RunTimeValue>>& vec){
+    void flatten_recursively(std::vector<std::pair<std::string, RunTimeVal*>>& vec){
         for(const auto& [var_name, var_val] : variables) {
             vec.push_back({var_name, var_val.value});
         }
@@ -75,71 +87,70 @@ public:
 };
 class SigmaInterpreter {
 public:
-    DOMAccessor* accessor;
+    std::string this_str = "this";
 
-    std::shared_ptr<Scope> current_scope = std::make_shared<Scope>(nullptr);
-    std::unordered_map<std::string, std::function<RunTimeValue(std::vector<RunTimeValue>)>> 
+    DOMAccessor* accessor;
+    static std::unordered_set<RunTimeValType> non_copyable_types;
+
+    std::shared_ptr<Scope> current_scope;
+    std::unordered_map<std::string, std::function<RunTimeVal*(std::vector<RunTimeVal*>&)>> 
         native_functions;
     std::unordered_set<RunTimeValType> break_out_types = {
         BreakType, ContinueType, ReturnType
     };
-    std::unordered_map<std::string, std::vector<std::shared_ptr<VariableDecleration>>> struct_decls;
+    std::unordered_map<std::string, std::vector<VariableDecleration*>> struct_decls;
 
     SigmaInterpreter();
     
     void initialize();
-    RunTimeValue evaluate(Stmt stmt);
-    RunTimeValue evaluateProgram(std::shared_ptr<SigmaProgram> program);
-    RunTimeValue evaluateBinaryExpression(std::shared_ptr<BinaryExpression> expr);
-    RunTimeValue evaluateNumericBinaryExpression(std::shared_ptr<NumVal> left,
-        std::shared_ptr<NumVal> right, std::string operat);
-    RunTimeValue evaluateBooleanBinaryExpression(std::shared_ptr<BoolVal> left,
-        std::shared_ptr<BoolVal> right, std::string op);
-    RunTimeValue evaluateStringBinaryExpression(std::shared_ptr<StringVal> left,
-        std::shared_ptr<StringVal> right, std::string op);
-    RunTimeValue evaluateFunctionCallExpression(std::shared_ptr<FunctionCallExpression> expr);
-    RunTimeValue evaluateIndexAccessExpression(std::shared_ptr<IndexAccessExpression> expr);
-    RunTimeValue evaluateMemberAccessExpression(std::shared_ptr<MemberAccessExpression> expr);
-    RunTimeValue evaluateIncrementExpression(std::shared_ptr<IncrementExpression> expr);
-    RunTimeValue evaluateDecrementExpression(std::shared_ptr<DecrementExpression> expr);
-    RunTimeValue evaluateNegativeExpression(std::shared_ptr<NegativeExpression> expr);
+    RunTimeVal* evaluate(Statement* stmt);
+    RunTimeVal* evaluateProgram(SigmaProgram* program);
+    RunTimeVal* evaluateBinaryExpression(BinaryExpression* expr);
+    RunTimeVal* evaluateNumericBinaryExpression(NumVal* left,
+        NumVal* right, std::string operat);
+    RunTimeVal* evaluateBooleanBinaryExpression(BoolVal* left,
+        BoolVal* right, std::string op);
+    RunTimeVal* evaluateStringBinaryExpression(StringVal* left,
+        StringVal* right, std::string op);
+    RunTimeVal* evaluateFunctionCallExpression(FunctionCallExpression* expr);
+    RunTimeVal* evaluateIndexAccessExpression(IndexAccessExpression* expr);
+    RunTimeVal* evaluateMemberAccessExpression(MemberAccessExpression* expr);
+    RunTimeVal* evaluateIncrementExpression(IncrementExpression* expr);
+    RunTimeVal* evaluateDecrementExpression(DecrementExpression* expr);
+    RunTimeVal* evaluateNegativeExpression(NegativeExpression* expr);
 
     // Shadowing Is Allowed
-    RunTimeValue evaluateVariableDeclStatement(std::shared_ptr<VariableDecleration> decl);
-    RunTimeValue evaluateVariableReInitStatement(std::shared_ptr<VariableReInit> decl);
-    RunTimeValue evaluateIfStatement(std::shared_ptr<IfStatement> if_stmt);
-    RunTimeValue evaluateWhileLoopStatement(std::shared_ptr<WhileLoopStatement> while_loop);
-    RunTimeValue evaluateForLoopStatement(std::shared_ptr<ForLoopStatement> for_loop);
-    RunTimeValue evaluateIndexReInitStatement(std::shared_ptr<IndexReInitStatement> stmt);
-    RunTimeValue evaluateStructDeclStatement(std::shared_ptr<StructDeclerationStatement> stmt);
-    RunTimeValue evaluateMemberReInitStatement(std::shared_ptr<MemberReInitExpression> expr);
-    RunTimeValue evaluateCompoundAssignmentStatement(std::shared_ptr<CompoundAssignmentStatement> stmt);
-    RunTimeValue evaluateHtmlStr(std::shared_ptr<StringExpression> expr);
+    RunTimeVal* evaluateVariableDeclStatement(VariableDecleration* decl);
+    RunTimeVal* evaluateVariableReInitStatement(VariableReInit* decl);
+    RunTimeVal* evaluateIfStatement(IfStatement* if_Statement);
+    RunTimeVal* evaluateWhileLoopStatement(WhileLoopStatement* while_loop);
+    RunTimeVal* evaluateForLoopStatement(ForLoopStatement* for_loop);
+    RunTimeVal* evaluateIndexReInitStatement(IndexReInitStatement* stmt);
+    RunTimeVal* evaluateStructDeclStatement(StructDeclerationStatement* stmt);
+    RunTimeVal* evaluateMemberReInitStatement(MemberReInitExpression* expr);
+    RunTimeVal* evaluateCompoundAssignmentStatement(CompoundAssignmentStatement* stmt);
+    RunTimeVal* evaluateHtmlStr(StringExpression* expr);
 
 
-    RunTimeValue toString(std::vector<RunTimeValue>& args);
-    RunTimeValue numIota(std::vector<RunTimeValue>& args);
-    RunTimeValue clone(std::vector<RunTimeValue>& args);
-    RunTimeValue getCurrentTimeMillis(std::vector<RunTimeValue>& args);
+    RunTimeVal* toString(std::vector<RunTimeVal*>& args);
+    RunTimeVal* numIota(std::vector<RunTimeVal*>& args);
+    RunTimeVal* clone(std::vector<RunTimeVal*>& args);
+    RunTimeVal* getCurrentTimeMillis(std::vector<RunTimeVal*>& args);
 
     
-    RunTimeValue getElementById(std::vector<RunTimeValue>& args);
-    RunTimeValue setElementInnerHtml(std::vector<RunTimeValue>& args);
-    RunTimeValue getElementsByClassName(std::vector<RunTimeValue>& args);
+    RunTimeVal* getElementById(std::vector<RunTimeVal*>& args);
+    RunTimeVal* setElementInnerHtml(std::vector<RunTimeVal*>& args);
+    RunTimeVal* getElementsByClassName(std::vector<RunTimeVal*>& args);
 
-    RunTimeValue evaluateAnonymousLambdaCall(std::shared_ptr<LambdaVal> lambda, std::vector<RunTimeValue> args);
+    RunTimeVal* evaluateAnonymousLambdaCall(LambdaVal* lambda, std::vector<RunTimeVal*> args);
 
-    static RunTimeValue copyIfRecommended(RunTimeValue val){
-        if(val->type == StructType || val->type == LambdaType || val->type == StringType ||
-            val->type == ArrayType || val->type == BinaryType || val->type == NativeFunctionType ||
-            val->type == HtmlType)
+    static RunTimeVal* copyIfRecommended(RunTimeVal* val){
+        if(non_copyable_types.contains(val->type))
             return val;
         return val->clone();
     }
-    static bool shouldICopy(RunTimeValue val){
-        if(val->type == StructType || val->type == LambdaType || val->type == StringType ||
-            val->type == ArrayType || val->type == BinaryType || val->type == NativeFunctionType ||
-            val->type == HtmlType)
+    static bool shouldICopy(RunTimeVal* val){
+        if(non_copyable_types.contains(val->type))
             return false;
         return true;
     }

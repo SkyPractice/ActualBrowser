@@ -4,7 +4,7 @@
 
 class CryptoLib : public StdLib {
 public:
-    static std::shared_ptr<StructVal> getStruct();
+    static StructVal* getStruct();
 
     static RunTimeValue Sha256Wrapper(std::vector<RunTimeValue>& args);
     static RunTimeValue Sha512Wrapper(std::vector<RunTimeValue>& args);
