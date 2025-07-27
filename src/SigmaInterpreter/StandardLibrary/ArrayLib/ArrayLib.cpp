@@ -14,7 +14,7 @@ StructVal* ArrayLib::getStruct() {
     return RunTimeFactory::makeStruct(std::move(vals));
 };
 
-RunTimeValue ArrayLib::resizeArray(std::vector<RunTimeValue>& args) {
+RunTimeValue ArrayLib::resizeArray(std::vector<RunTimeValue>& args, SigmaInterpreter*) {
     auto arr = dynamic_cast<ArrayVal*>(args[0]);
     auto new_size = static_cast<size_t>(dynamic_cast<NumVal*>(args[1])->num);
 
@@ -22,33 +22,33 @@ RunTimeValue ArrayLib::resizeArray(std::vector<RunTimeValue>& args) {
     return args[1];
 };
 
-RunTimeValue ArrayLib::pushBackArray(std::vector<RunTimeValue>& args){
+RunTimeValue ArrayLib::pushBackArray(std::vector<RunTimeValue>& args, SigmaInterpreter*){
     auto arr = dynamic_cast<ArrayVal*>(args[0]);
     arr->vals.push_back(StdLib::copyIfRecommended(args[1]));
     return nullptr;
 };
-RunTimeValue ArrayLib::popBackArray(std::vector<RunTimeValue>& args){
+RunTimeValue ArrayLib::popBackArray(std::vector<RunTimeValue>& args, SigmaInterpreter*){
     auto arr = dynamic_cast<ArrayVal*>(args[0]);
     arr->vals.pop_back();
     return nullptr;
 };
-RunTimeValue ArrayLib::pushFirstArray(std::vector<RunTimeValue>& args){
+RunTimeValue ArrayLib::pushFirstArray(std::vector<RunTimeValue>& args, SigmaInterpreter*){
     auto arr = dynamic_cast<ArrayVal*>(args[0]);
     arr->vals.insert(arr->vals.begin(), StdLib::copyIfRecommended(args[1]));
     return nullptr;
 };
-RunTimeValue ArrayLib::popFirstArray(std::vector<RunTimeValue>& args){
+RunTimeValue ArrayLib::popFirstArray(std::vector<RunTimeValue>& args, SigmaInterpreter*){
     auto arr = dynamic_cast<ArrayVal*>(args[0]);
     arr->vals.erase(arr->vals.begin());
     return nullptr;
 };
-RunTimeValue ArrayLib::insertIntoArray(std::vector<RunTimeValue>& args){
+RunTimeValue ArrayLib::insertIntoArray(std::vector<RunTimeValue>& args, SigmaInterpreter*){
     auto arr = dynamic_cast<ArrayVal*>(args[0]);
     size_t index = static_cast<size_t>(dynamic_cast<NumVal*>(args[1])->num);
     arr->vals.insert(arr->vals.begin() + index, StdLib::copyIfRecommended(args[2]));
     return nullptr;
 };
 
-RunTimeValue ArrayLib::arraySize(std::vector<RunTimeValue>& args) {
+RunTimeValue ArrayLib::arraySize(std::vector<RunTimeValue>& args, SigmaInterpreter*) {
     return RunTimeFactory::makeNum(dynamic_cast<ArrayVal*>(args[0])->vals.size());
 };

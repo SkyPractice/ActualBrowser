@@ -1,4 +1,5 @@
 #include "SigmaInterpreter.h"
+#include "GarbageCollector/GarbageCollector.h"
 #include "RunTime.h"
 #include "SigmaAst.h"
 #include <algorithm>
@@ -15,6 +16,7 @@
 #include "StandardLibrary/ArrayLib/ArrayLib.h"
 #include "StandardLibrary/FilesLib/FilesLib.h"
 #include "StandardLibrary/CryptoLib/CryptoLib.h"
+#include "StandardLibrary/GCLib/GCLib.h"
 #include "StandardLibrary/StdLib.h"
 #include "StandardLibrary/ThreadLib/ThreadLib.h"
 
@@ -36,13 +38,13 @@ void SigmaInterpreter::initialize(){
     std::unordered_map<std::string, RunTimeValue> obj_vals;
 
     obj_vals.insert({"ref", RunTimeFactory::makeNativeFunction(
-        [this](std::vector<RunTimeVal*>& vals) { 
+        [this](std::vector<RunTimeVal*>& vals, SigmaInterpreter*) { 
         return RunTimeFactory::makeRefrence(&vals[0]);
         }
     )    
     });
     obj_vals.insert({"valByRef", RunTimeFactory::makeNativeFunction(
-        [this](std::vector<RunTimeVal*>& vals) { 
+        [this](std::vector<RunTimeVal*>& vals, SigmaInterpreter*) { 
             return *static_cast<RefrenceVal*>(vals[0])->val;
         }
     )    
@@ -65,6 +67,7 @@ void SigmaInterpreter::initialize(){
     current_scope->declareVar("Crypto", { CryptoLib::getStruct(), true });
     current_scope->declareVar("Document", { RunTimeFactory::makeStruct(dom_vals), true });
     current_scope->declareVar("Thread", {ThreadLib::getStruct(), true});
+    current_scope->declareVar("GarbageCollector", {GCLib::getStruct(), true});
 }
 
 RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
@@ -423,7 +426,7 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(FunctionCallExpres
             current_scope->declareVar(this_str, { mem_val, true });
         }
         auto ac_func = static_cast<NativeFunctionVal*>(func);
-        auto ac_vv = ac_func->func(args);
+        auto ac_vv = ac_func->func(args, this);
         current_scope = last_sc;
         StdLib::current_calling_scope = nullptr;
         return ac_vv;

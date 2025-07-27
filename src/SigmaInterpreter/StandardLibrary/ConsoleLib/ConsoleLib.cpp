@@ -26,7 +26,7 @@ StructVal* ConsoleLib::getStruct() {
     return RunTimeFactory::makeStruct(std::move(vals));
 };
 
-RunTimeValue ConsoleLib::println(std::vector<RunTimeValue>& args){
+RunTimeValue ConsoleLib::println(std::vector<RunTimeValue>& args, SigmaInterpreter*){
 
     std::string choosen_clr = "white";
     if(args.size() > 1){
@@ -42,7 +42,7 @@ RunTimeValue ConsoleLib::println(std::vector<RunTimeValue>& args){
                 dynamic_cast<StringVal*>(second)->str.size();
         }) + 1);
 };
-RunTimeValue ConsoleLib::print(std::vector<RunTimeValue>& args){
+RunTimeValue ConsoleLib::print(std::vector<RunTimeValue>& args, SigmaInterpreter*){
     std::string choosen_clr = "white";
     if(args.size() > 1){
         choosen_clr = dynamic_cast<StringVal*>(args[1])->str;
@@ -58,7 +58,7 @@ RunTimeValue ConsoleLib::print(std::vector<RunTimeValue>& args){
 };
 
 
-RunTimeValue ConsoleLib::input(std::vector<RunTimeValue>& args) {
+RunTimeValue ConsoleLib::input(std::vector<RunTimeValue>& args, SigmaInterpreter*) {
     std::string str;
     std::getline(std::cin, str);
     return RunTimeFactory::makeString(str);

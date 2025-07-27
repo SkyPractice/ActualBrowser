@@ -34,8 +34,8 @@ public:
 
     static StructVal* getStruct();
 
-    static RunTimeValue print(std::vector<RunTimeValue>& args);
-    static RunTimeValue println(std::vector<RunTimeValue>& args);
-    static RunTimeValue input(std::vector<RunTimeValue>& args);
+    static RunTimeValue print(std::vector<RunTimeValue>& args, SigmaInterpreter*);
+    static RunTimeValue println(std::vector<RunTimeValue>& args, SigmaInterpreter*);
+    static RunTimeValue input(std::vector<RunTimeValue>& args, SigmaInterpreter*);
 
 };

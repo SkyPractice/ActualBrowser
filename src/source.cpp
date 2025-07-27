@@ -3,10 +3,13 @@
 #include "GUI/Window.h"
 #include <gtkmm/application.h>
 #include "Concurrency/ThreadPool.h"
+#include "SigmaInterpreter/GarbageCollector/GarbageCollector.h"
+#include "SigmaInterpreter/RunTime.h"
 
 boost::asio::thread_pool Concurrency::pool = boost::asio::thread_pool(4);
 
 int main(int argc, char** argv){
+    RunTimeFactory::target_alloc_vec = &GarbageCollector::alive_vals;
     ERR_load_crypto_strings();
     OpenSSL_add_all_algorithms();
     net::io_context io_ctx;

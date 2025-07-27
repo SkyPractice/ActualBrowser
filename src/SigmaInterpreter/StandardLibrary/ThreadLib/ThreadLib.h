@@ -7,6 +7,6 @@ class ThreadLib {
 public:
     static StructVal* getStruct();
 
-    static RunTimeValue sleepCurrentThread(std::vector<RunTimeValue>& args);
-    static RunTimeValue detachLambda(std::vector<RunTimeValue>& args);
+    static RunTimeValue sleepCurrentThread(std::vector<RunTimeValue>& args, SigmaInterpreter*);
+    static RunTimeValue detachLambda(std::vector<RunTimeValue>& args, SigmaInterpreter*);
 };

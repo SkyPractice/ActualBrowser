@@ -5,6 +5,7 @@
 #include <sstream>
 #include <unordered_map>
 
+std::vector<RunTimeVal*>* RunTimeFactory::target_alloc_vec = nullptr;
 std::pmr::unsynchronized_pool_resource RunTimeMemory::pool;
 
 NumVal* RunTimeFactory::makeNum(double num) {

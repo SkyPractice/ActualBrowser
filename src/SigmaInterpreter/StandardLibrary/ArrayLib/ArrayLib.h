@@ -5,11 +5,11 @@ class ArrayLib {
 public:
     static StructVal* getStruct();
 
-    static RunTimeValue resizeArray(std::vector<RunTimeValue>& args);
-    static RunTimeValue pushBackArray(std::vector<RunTimeValue>& args);
-    static RunTimeValue popBackArray(std::vector<RunTimeValue>& args);
-    static RunTimeValue pushFirstArray(std::vector<RunTimeValue>& args);
-    static RunTimeValue popFirstArray(std::vector<RunTimeValue>& args);
-    static RunTimeValue insertIntoArray(std::vector<RunTimeValue>& args);
-    static RunTimeValue arraySize(std::vector<RunTimeValue>& args);
+    static RunTimeValue resizeArray(std::vector<RunTimeValue>& args, SigmaInterpreter*);
+    static RunTimeValue pushBackArray(std::vector<RunTimeValue>& args, SigmaInterpreter*);
+    static RunTimeValue popBackArray(std::vector<RunTimeValue>& args, SigmaInterpreter*);
+    static RunTimeValue pushFirstArray(std::vector<RunTimeValue>& args, SigmaInterpreter*);
+    static RunTimeValue popFirstArray(std::vector<RunTimeValue>& args, SigmaInterpreter*);
+    static RunTimeValue insertIntoArray(std::vector<RunTimeValue>& args, SigmaInterpreter*);
+    static RunTimeValue arraySize(std::vector<RunTimeValue>& args, SigmaInterpreter*);
 };

@@ -8,6 +8,8 @@
 class Scope;
 typedef RunTimeVal* RunTimeValue;
 
+#define COMPILED_FUNC_ARGS std::vector<RunTimeValue>& args, SigmaInterpreter* interpreter
+
 class StdLib {
 public:
     static std::shared_ptr<Scope> current_calling_scope;
