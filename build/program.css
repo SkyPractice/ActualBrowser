@@ -1,7 +1,21 @@
 .hello {
     background-image: none;
-    min-width: 500px;
-    min-height: 500px;
     background-color: red;
-    border-radius: 250px;
+    min-width: 300px;
+    min-height: 300px;
+}
+.welcome {
+    color: white;
+}
+.imgg {
+    min-width: 200px;
+    min-height: 200px;
+}
+.mhm{
+    background-image: none;
+    background-color: red;
+}
+.myh{
+    background-image: none;
+    background-color: green;
 }

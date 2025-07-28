@@ -1,3 +1,27 @@
-for var i = -10, i < 0, ++i {
-    Console.println(String.valueOf(i))
+// var first = Time.getCurrentTimeMillis()
+// 
+// for var i = 0, i < 1000000, ++i {
+// }
+// 
+// var second = Time.getCurrentTimeMillis()
+// Console.println(String.valueOf(second - first))
+// 
+// // shadowing in action
+// var first = Time.getCurrentTimeMillis()
+// 
+// // garbage collector in action
+// GarbageCollector.mark()
+// GarbageCollector.sweep()
+// 
+// var second = Time.getCurrentTimeMillis()
+// Console.println(String.valueOf(second - first))
+var str = Files.readFileSync("hello.txt")
+var clr_array = ["green", "bg_green", "blue", "bg_blue", "yellow", "bg_yellow", "magenta", "bg_magenta",
+    "red", "bg_red"]
+for var k = 0, k < 100, ++k{
+    for var i = 0, i < 10, ++i {
+        Thread.sleep(5)
+        Console.println(str, clr_array[Math.rand() % 10])
+    }
+    
 }
