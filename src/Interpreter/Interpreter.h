@@ -15,6 +15,7 @@
 #include "../SigmaInterpreter/SigmaInterpreter.h"
 #include <iostream>
 #include <unordered_map>
+#include "../SigmaInterpreter/GarbageCollector/GarbageCollector.h"
 
 namespace fs = std::filesystem;
 
@@ -111,6 +112,7 @@ public:
                     scripting_interpreter.accessor = &accessor;
                     auto result = scripting_interpreter.evaluate(ast);
                     SigmaParser::memory_pool.release();
+                    GarbageCollector::alive_vals.clear();
                     RunTimeMemory::pool.release();
                 }
             }

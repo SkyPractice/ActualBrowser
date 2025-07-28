@@ -22,6 +22,7 @@ enum RunTimeValType {
 class RunTimeVal {
 public:
     bool marked = false;
+    bool is_l_val = false;
     RunTimeValType type;
     RunTimeVal(RunTimeValType t): type(t) {};
 
@@ -32,11 +33,11 @@ public:
     virtual void unMarkChildren() {};
     virtual void mark() { if(!marked) { marked = true; markChildren(); } };
     virtual void unMark() { if(marked) { marked = false; unMarkChildren(); } };
-    virtual void cleanUpChildren(std::pmr::unsynchronized_pool_resource& target_pool) {};
+    virtual void cleanUpChildren(std::pmr::synchronized_pool_resource& target_pool) {};
     virtual size_t getSize(){ return sizeof(RunTimeVal); };
     virtual size_t getAlignment() { return alignof(RunTimeVal); };
     virtual std::string getString() { return ""; };
-    static void deallocateVal(std::pmr::unsynchronized_pool_resource& target_pool, RunTimeVal** ptr){
+    static void deallocateVal(std::pmr::synchronized_pool_resource& target_pool, RunTimeVal** ptr){
         auto size = (*ptr)->getSize();
         auto alignment = (*ptr)->getAlignment();
         (*ptr)->~RunTimeVal();
@@ -130,7 +131,7 @@ public:
         RunTimeVal(LambdaType), params(std::move(parameters)), stmts(std::move(statements)),
         captured(captured_vals) {}; 
 
-    void cleanUpChildren(std::pmr::unsynchronized_pool_resource& target_pool) override {
+    void cleanUpChildren(std::pmr::synchronized_pool_resource& target_pool) override {
         for(auto& [name, val] : captured){
             if(val) deallocateVal(target_pool, &val);
         }
@@ -181,12 +182,7 @@ public:
         return str;
     }
 
-    void cleanUpChildren(std::pmr::unsynchronized_pool_resource& target_pool) override {
-        for(auto& val : vals){
-            if(val)deallocateVal(target_pool, &val);
-        }
-        vals.clear();
-    }
+
     size_t getSize() override { return sizeof(ArrayVal); };
     size_t getAlignment() override { return alignof(ArrayVal); };
      
@@ -217,12 +213,6 @@ public:
     std::string getString() override {
         return "<struct>";
     }
-    void cleanUpChildren(std::pmr::unsynchronized_pool_resource& target_pool) override {
-        for(auto& [name, val] : vals){
-            if(val) deallocateVal(target_pool, &val);
-        }
-        vals.clear();
-    }
 
     size_t getSize() override { return sizeof(StructVal); };
     size_t getAlignment() override { return alignof(StructVal); };
@@ -248,10 +238,6 @@ public:
 class ReturnVal : public RunTimeVal {
 public:
     RunTimeVal* val;
-
-    void cleanUpChildren(std::pmr::unsynchronized_pool_resource& target_pool) override {
-        deallocateVal(target_pool, &val);
-    }
 
     size_t getSize() override { return sizeof(ReturnVal); };
     size_t getAlignment() override { return alignof(ReturnVal); };
@@ -340,7 +326,7 @@ public:
 
 class RunTimeMemory {
 public:
-    static std::pmr::unsynchronized_pool_resource pool;
+    static std::pmr::synchronized_pool_resource pool;
 };
 
 class RunTimeFactory {

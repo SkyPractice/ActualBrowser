@@ -17,8 +17,11 @@
 #include "StandardLibrary/FilesLib/FilesLib.h"
 #include "StandardLibrary/CryptoLib/CryptoLib.h"
 #include "StandardLibrary/GCLib/GCLib.h"
+#include "StandardLibrary/MathLib/MathLib.h"
 #include "StandardLibrary/StdLib.h"
 #include "StandardLibrary/ThreadLib/ThreadLib.h"
+#include "StandardLibrary/TimeLib/TimeLib.h"
+#include "StandardLibrary/MathLib/MathLib.h"
 
 
 SigmaInterpreter::SigmaInterpreter(){
@@ -62,12 +65,13 @@ void SigmaInterpreter::initialize(){
     current_scope->declareVar("Console", { ConsoleLib::getStruct() ,true });
     current_scope->declareVar("String", { RunTimeFactory::makeStruct((str_vals)), true });
     current_scope->declareVar("Object", { RunTimeFactory::makeStruct((obj_vals)), true });
-    current_scope->declareVar("Time", {RunTimeFactory::makeStruct(tim_vals), true});
+    current_scope->declareVar("Time", {TimeLib::getStruct(), true});
     current_scope->declareVar("Array", {ArrayLib::getStruct(), true});
     current_scope->declareVar("Crypto", { CryptoLib::getStruct(), true });
     current_scope->declareVar("Document", { RunTimeFactory::makeStruct(dom_vals), true });
     current_scope->declareVar("Thread", {ThreadLib::getStruct(), true});
     current_scope->declareVar("GarbageCollector", {GCLib::getStruct(), true});
+    current_scope->declareVar("Math", { MathLib::getStruct(), true });
 }
 
 RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
@@ -573,15 +577,15 @@ RunTimeValue SigmaInterpreter::evaluateNumericBinaryExpression(NumVal* left,
     if(operat == "/")
         return RunTimeFactory::makeNum(left->num / right->num);
     if(operat == "%")
-        return RunTimeFactory::makeNum((int)left->num % (int)right->num);
+        return RunTimeFactory::makeNum((long)left->num % (long)right->num);
     if(operat == "&")
-        return RunTimeFactory::makeNum((int)left->num & (int)right->num);
+        return RunTimeFactory::makeNum((long)left->num & (long)right->num);
     if(operat == "|")
-        return RunTimeFactory::makeNum((int)left->num | (int)right->num);
+        return RunTimeFactory::makeNum((long)left->num | (long)right->num);
     if(operat == ">>")
-        return RunTimeFactory::makeNum((int)left->num >> (int)right->num);
+        return RunTimeFactory::makeNum((long)left->num >> (long)right->num);
     if(operat == "<<")
-        return RunTimeFactory::makeNum((int)left->num << (int)right->num);
+        return RunTimeFactory::makeNum((long)left->num << (long)right->num);
     if(operat == "==")
         return RunTimeFactory::makeBool(left->num == right->num);
     if(operat == ">")

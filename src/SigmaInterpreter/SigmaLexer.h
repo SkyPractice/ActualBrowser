@@ -45,7 +45,7 @@ public:
     std::unordered_set<char> skip_chars = {
         ' ', '\t', '\n', '\r'
     };
-    std::vector<SigmaToken> tokenize(std::string code);
+    std::vector<SigmaToken> tokenize(std::string& code);
 
     std::string *actual_code = nullptr;
     size_t current_pos = 0;

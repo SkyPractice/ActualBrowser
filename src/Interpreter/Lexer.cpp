@@ -2,7 +2,7 @@
 #include <iostream>
 #include <unordered_map>
 
-std::vector<Token> Lexer::tokenize(std::string code){
+std::vector<Token> Lexer::tokenize(std::string& code){
     current_code = &code;
     current_pos = 0;
     current_char = (*current_code)[0];

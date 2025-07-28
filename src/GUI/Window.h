@@ -21,9 +21,11 @@
 #include "../Interpreter/Interpreter.h"
 #include <gtkmm/scrolledwindow.h>
 #include <sigc++/functors/mem_fun.h>
+#include <gtkmm/messagedialog.h>
+#include <stdexcept>
 
 class BrowserWindow : public Gtk::Window {
-    HttpManager& http_manager;
+    HttpManager* http_manager;
     Gtk::Label* content_test_label = Gtk::manage(new Gtk::Label("hello"));
     Gtk::Entry* url_input;
     Lexer lexer;
@@ -45,7 +47,7 @@ public:
         ERR_free_strings();
         return false;
     }
-    BrowserWindow(HttpManager& httpManager): http_manager(httpManager){
+    void init(bool has_net = true){
         set_default_size(600, 500);
 
         auto child_box = Gtk::manage(new Gtk::Box(Gtk::Orientation::VERTICAL));
@@ -83,10 +85,35 @@ public:
         controller->signal_key_released().connect([=, this](guint keyval, guint keycode, Gdk::ModifierType state){
             if(keyval == GDK_KEY_Return && url_input->get_text_length() > 0){
 
-                std::string html_content = http_manager.getRequest(url_input->get_text());
-                auto tokens = lexer.tokenize(html_content);
-                auto program = parser.produceAst(tokens);
-                interpreter.renderTags(actual_box_member, program);
+                if(has_net){
+                    std::string html_content = http_manager->getRequest(url_input->get_text());
+                    auto tokens = lexer.tokenize(html_content);
+                    auto program = parser.produceAst(tokens);
+                    interpreter.renderTags(actual_box_member, program);
+                } else {
+                    std::string url = url_input->get_text();
+                    std::string html_text;
+                    if(fs::exists(url)){
+                        std::ifstream fstrea(url, std::ios::ate);
+
+                        size_t size = fstrea.tellg();
+
+                        html_text.resize(size);
+                        fstrea.seekg(0, std::ios::beg);
+                        fstrea.read(&html_text[0], size);
+        
+                        fstrea.close();
+                    } else {
+                        std::cout << "requires internet to fetch . . .";
+                        Gtk::MessageDialog msg(*this, "No Internet !");
+                        msg.add_button("Ok", 0);
+                        msg.show();
+                        return;
+                    };
+                    auto tokens = lexer.tokenize(html_text);
+                    auto program = parser.produceAst(tokens);
+                    interpreter.renderTags(actual_box_member, program);
+                }
             }
         });
         
@@ -121,6 +148,11 @@ public:
         Gtk::CssProvider::add_provider_for_display(
             Gdk::Display::get_default(), css_provider,
              GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-
     }
+    BrowserWindow(HttpManager* httpManager): http_manager(httpManager){
+        if(httpManager)
+            init();
+        else init(false);
+    };
+
 };

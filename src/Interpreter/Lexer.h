@@ -48,7 +48,7 @@ public:
     
 
 
-    std::vector<Token> tokenize(std::string code);
+    std::vector<Token> tokenize(std::string& code);
     char current_char = '0';
     size_t current_pos = 0;
     std::string* current_code = nullptr;

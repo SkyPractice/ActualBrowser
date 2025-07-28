@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <string>
 
-std::vector<SigmaToken> SigmaLexer::tokenize(std::string code) {
+std::vector<SigmaToken> SigmaLexer::tokenize(std::string& code) {
     current_char = code[0];
     current_pos = 0;
     actual_code = &code;

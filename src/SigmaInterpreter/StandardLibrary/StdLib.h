@@ -16,20 +16,6 @@ public:
     void addValToStruct(StructVal* target_struct, std::string name,
         RunTimeVal* val);
 
-    static RunTimeVal* copyIfRecommended(RunTimeVal* val){
-        if(val->type == StructType || val->type == LambdaType || val->type == StringType ||
-            val->type == ArrayType || val->type == BinaryType || val->type == NativeFunctionType ||
-            val->type == HtmlType)
-            return val;
-        return val->clone();
-    }
-    static bool shouldICopy(RunTimeVal* val){
-        if(val->type == StructType || val->type == LambdaType || val->type == StringType ||
-            val->type == ArrayType || val->type == BinaryType || val->type == NativeFunctionType ||
-            val->type == HtmlType)
-            return false;
-        return true;
-    }
 };
 
 class StdLibInitializer {

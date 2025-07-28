@@ -13,7 +13,7 @@ StructVal* GCLib::getStruct() {
 };
 
 RunTimeVal* GCLib::mark(COMPILED_FUNC_ARGS) {
-    auto vals = interpreter->current_scope->flatten();
+    auto vals = interpreter->current_scope->flatten_as_vec();
     GarbageCollector::mark(vals);
     return nullptr;
 };

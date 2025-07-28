@@ -44,10 +44,12 @@ public:
 
     // shadowing is allowed
     void declareVar(std::string name, Variable val){
+        val.value->is_l_val = true;
         variables[name] = val;
     };
 
     void reInitVar(std::string& name, RunTimeVal* val){
+        val->is_l_val = true;
         auto itr = cache.find(name);
         bool result = (itr != cache.end());
         if(!result){
@@ -82,6 +84,20 @@ public:
         }
         if(parent){
             parent->flatten_recursively(vec);
+        }
+    }
+    std::vector<RunTimeVal*> flatten_as_vec(){
+        std::vector<RunTimeVal*> actual_vec;
+        flatten_as_vec_recurse(actual_vec);
+        return actual_vec;
+    }
+
+    void flatten_as_vec_recurse(std::vector<RunTimeVal*>& vec){
+        for(const auto& [var_name, var_val] : variables) {
+            vec.push_back(var_val.value);
+        }
+        if(parent){
+            parent->flatten_as_vec_recurse(vec);
         }
     }
 };
@@ -145,12 +161,12 @@ public:
     RunTimeVal* evaluateAnonymousLambdaCall(LambdaVal* lambda, std::vector<RunTimeVal*> args);
 
     static RunTimeVal* copyIfRecommended(RunTimeVal* val){
-        if(non_copyable_types.contains(val->type))
+        if(non_copyable_types.contains(val->type) || !val->is_l_val)
             return val;
         return val->clone();
     }
     static bool shouldICopy(RunTimeVal* val){
-        if(non_copyable_types.contains(val->type))
+        if(non_copyable_types.contains(val->type) || !val->is_l_val)
             return false;
         return true;
     }
