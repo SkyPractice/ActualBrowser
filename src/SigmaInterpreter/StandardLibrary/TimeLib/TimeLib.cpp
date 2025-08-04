@@ -5,10 +5,10 @@
 
 RunTimeVal* TimeLib::getStruct(){
     std::unordered_map<std::string, RunTimeValue> vals = {
-        {"getCurrentTimeMillis", RunTimeFactory::makeNativeFunction(&TimeLib::getCurrentTimeMillis)},
-        {"getCurrentTimeMicros", RunTimeFactory::makeNativeFunction(&TimeLib::getCurrentTimeMicros)},
-        {"getCurrentTimeSeconds", RunTimeFactory::makeNativeFunction(&TimeLib::getCurrentTimeSecs)},
-        {"getCurrentTime", RunTimeFactory::makeNativeFunction(&TimeLib::getTime)},
+        {"getCurrentTimeMillis", RunTimeFactory::makeNativeFunction(&TimeLib::getCurrentTimeMillis, {})},
+        {"getCurrentTimeMicros", RunTimeFactory::makeNativeFunction(&TimeLib::getCurrentTimeMicros, {})},
+        {"getCurrentTimeSeconds", RunTimeFactory::makeNativeFunction(&TimeLib::getCurrentTimeSecs, {})},
+        {"getCurrentTime", RunTimeFactory::makeNativeFunction(&TimeLib::getTime, {})},
     };
 
     return RunTimeFactory::makeStruct(vals);

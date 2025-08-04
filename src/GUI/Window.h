@@ -39,9 +39,11 @@ public:
 
     bool on_close_request() override {
         std::vector<std::shared_ptr<HTMLTag>> tagg;
-        interpreter.current_tags[0]->flatten(tagg);
-        for(auto& thing : tagg){
-            thing->parent_widget = nullptr; // cancell deletion cause handled auto
+        if(interpreter.current_tags.size() > 0){
+            interpreter.current_tags[0]->flatten(tagg);
+            for(auto& thing : tagg){
+                thing->tag_information.parent_widget = nullptr; // cancel deletion cause handled auto
+            }
         }
         EVP_cleanup();
         ERR_free_strings();
@@ -89,7 +91,8 @@ public:
                     std::string html_content = http_manager->getRequest(url_input->get_text());
                     auto tokens = lexer.tokenize(html_content);
                     auto program = parser.produceAst(tokens);
-                    interpreter.renderTags(actual_box_member, program);
+                    interpreter.target_window = this;
+                    interpreter.renderTags(actual_box_member, program, url_input->get_text());
                 } else {
                     std::string url = url_input->get_text();
                     std::string html_text;
@@ -112,7 +115,7 @@ public:
                     };
                     auto tokens = lexer.tokenize(html_text);
                     auto program = parser.produceAst(tokens);
-                    interpreter.renderTags(actual_box_member, program);
+                    interpreter.renderTags(actual_box_member, program, url);
                 }
             }
         });

@@ -3,7 +3,7 @@
 #include "SigmaAst.h"
 #include <functional>
 #include <memory>
-#include <mutex>
+#include "Util/Permissions/Permissions.h"
 #include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
@@ -21,10 +21,11 @@ public:
     std::shared_ptr<Scope> parent;
     std::unordered_map<std::string, Variable> variables;
     std::unordered_map<std::string, Scope*> cache;
+    PermissionContainer perms;
 
     Scope(std::shared_ptr<Scope> p): parent(p) {};
 
-    std::shared_ptr<Scope> traverse(std::string& var_name){
+    std::shared_ptr<Scope> traverse(const std::string& var_name){
         if(variables.contains(var_name)) return shared_from_this();
         else if (parent) return parent->traverse(var_name);
         return nullptr;
@@ -56,23 +57,25 @@ public:
             auto scope = traverse(name);
             if(!scope) { throw std::runtime_error("identifier " + name + " not found"); };
             auto& another_v = scope->variables.find(name)->second;
-            if(another_v.is_const) { throw std::runtime_error("Can't ReInitialize A Variable Marked As A Const"); };
+            if(another_v.is_const) { throw std::runtime_error("Can't ReInitialize A Variable Marked As A Const \"" + name + "\""); };
             another_v.value = val;
             cache.insert({name, scope.get()});
         }
         auto& current_var = itr->second->variables.find(name)->second;
-        if(current_var.is_const) { throw std::runtime_error("Can't ReInitialize A Variable Marked As A Const"); };
+        if(current_var.is_const) { throw std::runtime_error("Can't ReInitialize A Variable Marked As A Const \"" + name + "\""); };
         current_var.value = val;
     }
 
-    std::unordered_map<std::string, RunTimeVal*> flatten(){
+    std::unordered_map<std::string, RunTimeVal*> flatten(bool copy = false){
         std::vector<std::pair<std::string, RunTimeVal*>> actual_vec;
         flatten_recursively(actual_vec);
 
         std::unordered_map<std::string, RunTimeVal*> hash_map;
 
         for(auto& [var_name, var_val] : actual_vec){
-            hash_map.insert({var_name, var_val});
+            if(!copy)
+                hash_map.insert({std::move(var_name), var_val});
+            else hash_map.insert({std::move(var_name), var_val->clone()});
         }
 
         return hash_map;
@@ -101,22 +104,32 @@ public:
         }
     }
 };
+
 class SigmaInterpreter {
 public:
+    std::vector<RunTimeVal*> registered_event_handlers;
+    std::unordered_map<std::string, RunTimeVal*> async_lambdas;
+    std::vector<RunTimeVal*> wrapper_types_cache;
     std::string this_str = "this";
+    Gtk::Window* current_window;
+    PermissionContainer perms;
+
+    std::string doc_name;
 
     DOMAccessor* accessor;
     static std::unordered_set<RunTimeValType> non_copyable_types;
+    static std::unordered_map<RunTimeValType, std::string> type_to_string_table;
 
     std::shared_ptr<Scope> current_scope;
-    std::unordered_map<std::string, std::function<RunTimeVal*(std::vector<RunTimeVal*>&)>> 
-        native_functions;
     std::unordered_set<RunTimeValType> break_out_types = {
         BreakType, ContinueType, ReturnType
     };
     std::unordered_map<std::string, std::vector<VariableDecleration*>> struct_decls;
 
     SigmaInterpreter();
+    SigmaInterpreter(Gtk::Window* wind){
+        current_window = wind;
+    };
     
     void initialize();
     RunTimeVal* evaluate(Statement* stmt);
@@ -134,6 +147,7 @@ public:
     RunTimeVal* evaluateIncrementExpression(IncrementExpression* expr);
     RunTimeVal* evaluateDecrementExpression(DecrementExpression* expr);
     RunTimeVal* evaluateNegativeExpression(NegativeExpression* expr);
+    RunTimeVal* evaluateJsObjectExpression(JsObjectExpression* expr);
 
     // Shadowing Is Allowed
     RunTimeVal* evaluateVariableDeclStatement(VariableDecleration* decl);
@@ -145,18 +159,20 @@ public:
     RunTimeVal* evaluateStructDeclStatement(StructDeclerationStatement* stmt);
     RunTimeVal* evaluateMemberReInitStatement(MemberReInitExpression* expr);
     RunTimeVal* evaluateCompoundAssignmentStatement(CompoundAssignmentStatement* stmt);
-    RunTimeVal* evaluateHtmlStr(StringExpression* expr);
 
 
     RunTimeVal* toString(std::vector<RunTimeVal*>& args);
     RunTimeVal* numIota(std::vector<RunTimeVal*>& args);
     RunTimeVal* clone(std::vector<RunTimeVal*>& args);
     RunTimeVal* getCurrentTimeMillis(std::vector<RunTimeVal*>& args);
+    RunTimeVal* getStringASCII(std::vector<RunTimeVal*>& args);
+    RunTimeVal* toNum(std::vector<RunTimeVal*>& args);
 
     
     RunTimeVal* getElementById(std::vector<RunTimeVal*>& args);
     RunTimeVal* setElementInnerHtml(std::vector<RunTimeVal*>& args);
     RunTimeVal* getElementsByClassName(std::vector<RunTimeVal*>& args);
+    RunTimeVal* setOnClick(std::vector<RunTimeVal*>& args);
 
     RunTimeVal* evaluateAnonymousLambdaCall(LambdaVal* lambda, std::vector<RunTimeVal*> args);
 
@@ -171,8 +187,13 @@ public:
         return true;
     }
 
+    ObjectVal* getThis() {
+        RunTimeVal* target_this = current_scope->getVal(this_str);
+        if(target_this->type == StructType)
+            return static_cast<ObjectVal*>(target_this);
+        return nullptr;
+    };
 
-    // Crypto wrappers
-
+    std::vector<RunTimeVal*> getAccessibleValues();
 
 };

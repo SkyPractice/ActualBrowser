@@ -1,31 +1,36 @@
 #include "SigmaInterpreter.h"
-#include "GarbageCollector/GarbageCollector.h"
 #include "RunTime.h"
 #include "SigmaAst.h"
 #include <algorithm>
+#include <exception>
 #include <format>
-#include <iostream>
 #include <memory>
-#include <mutex>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include "../Interpreter/Interpreter.h"
 #include "../Interpreter/Parser.h"
-#include "StandardLibrary/ConsoleLib/ConsoleLib.h"
-#include "StandardLibrary/ArrayLib/ArrayLib.h"
-#include "StandardLibrary/FilesLib/FilesLib.h"
-#include "StandardLibrary/CryptoLib/CryptoLib.h"
-#include "StandardLibrary/GCLib/GCLib.h"
-#include "StandardLibrary/MathLib/MathLib.h"
-#include "StandardLibrary/StdLib.h"
-#include "StandardLibrary/ThreadLib/ThreadLib.h"
-#include "StandardLibrary/TimeLib/TimeLib.h"
-#include "StandardLibrary/MathLib/MathLib.h"
-
+#include "StandardLibrary/TypeWrappers/StringWrapper.h"
+#include "Util/Util.h"
+#include "StandardLibrary/TypeWrappers/ArrayWrapper.h"
 
 SigmaInterpreter::SigmaInterpreter(){
+    current_window = nullptr;
 };
+
+
+//    NumType, StringType, CharType, BoolType, LambdaType, ArrayType, StructType, ReturnType,
+//    BreakType, ContinueType, NativeFunctionType, RefrenceType, BinaryType, HtmlType, AnyType
+
+std::unordered_map<RunTimeValType, std::string> SigmaInterpreter::type_to_string_table = {
+    {NumType, "Number"}, {StringType, "String"}, {CharType, "Char"}, 
+    {BoolType, "Bool"}, {LambdaType, "Lambda"}, {ArrayType, "Array"},
+    {StructType, "Struct"}, {NativeFunctionType, "CompiledFunction"},
+    {RefrenceType, "Refrence"}, {BinaryType, "Binary"}, {HtmlType, "HtmlElement"},
+    {AnyType, "Any"}
+};
+
 
 std::unordered_set<RunTimeValType> SigmaInterpreter::non_copyable_types = {
         StructType, LambdaType, StringType, ArrayType, BinaryType, NativeFunctionType, HtmlType
@@ -36,42 +41,46 @@ void SigmaInterpreter::initialize(){
     struct_decls.clear();
     
     std::unordered_map<std::string, RunTimeValue> str_vals;
-    str_vals.insert({"valueOf", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::toString, this, std::placeholders::_1))});
+    str_vals.insert({"valueOf", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::toString, this, std::placeholders::_1), {{"val", AnyType}})});
+    str_vals.insert({"ord", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::getStringASCII, this, std::placeholders::_1), {{"string", StringType}})});
+
+    std::unordered_map<std::string, RunTimeValue> num_vals;
+    num_vals.insert({"valueOf", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::toNum, this, std::placeholders::_1), {{"val", AnyType}})});
+
 
     std::unordered_map<std::string, RunTimeValue> obj_vals;
 
     obj_vals.insert({"ref", RunTimeFactory::makeNativeFunction(
         [this](std::vector<RunTimeVal*>& vals, SigmaInterpreter*) { 
         return RunTimeFactory::makeRefrence(&vals[0]);
-        }
+        }, {{"val", AnyType}}
     )    
     });
     obj_vals.insert({"valByRef", RunTimeFactory::makeNativeFunction(
         [this](std::vector<RunTimeVal*>& vals, SigmaInterpreter*) { 
             return *static_cast<RefrenceVal*>(vals[0])->val;
-        }
-    )    
+        },
+    {{"refrence", RefrenceType}})   
     });
-    obj_vals.insert({"clone", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::clone, this, std::placeholders::_1))});
-
-    std::unordered_map<std::string, RunTimeValue> tim_vals;
-    tim_vals.insert({"getCurrentTimeMillis", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::getCurrentTimeMillis, this, std::placeholders::_1))});
-    std::unordered_map<std::string, RunTimeValue> dom_vals;
-    dom_vals.insert({"getElementById", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::getElementById, this, std::placeholders::_1))});
-    dom_vals.insert({"getElementsByClassName", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::getElementsByClassName, this, std::placeholders::_1))});
-    dom_vals.insert({"setInnerHtml", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::setElementInnerHtml, this, std::placeholders::_1))});
-
-    current_scope->declareVar("Files", { FilesLib::getStruct() ,true });
-    current_scope->declareVar("Console", { ConsoleLib::getStruct() ,true });
+    obj_vals.insert({"clone", RunTimeFactory::makeNativeFunction(std::bind(&SigmaInterpreter::clone, this, std::placeholders::_1), {{"val", AnyType}})});
+    
     current_scope->declareVar("String", { RunTimeFactory::makeStruct((str_vals)), true });
+    current_scope->declareVar("Number", { RunTimeFactory::makeStruct((num_vals)), true });
     current_scope->declareVar("Object", { RunTimeFactory::makeStruct((obj_vals)), true });
-    current_scope->declareVar("Time", {TimeLib::getStruct(), true});
-    current_scope->declareVar("Array", {ArrayLib::getStruct(), true});
-    current_scope->declareVar("Crypto", { CryptoLib::getStruct(), true });
-    current_scope->declareVar("Document", { RunTimeFactory::makeStruct(dom_vals), true });
-    current_scope->declareVar("Thread", {ThreadLib::getStruct(), true});
-    current_scope->declareVar("GarbageCollector", {GCLib::getStruct(), true});
-    current_scope->declareVar("Math", { MathLib::getStruct(), true });
+
+    Util::SigmaInterpreterHelper::initializeStandardLibraries(current_scope);
+    ArrayWrapper::initializeWrapper();
+    StringWrapper::initializeWrapper();
+
+    wrapper_types_cache = {};
+
+    for(auto& v : ArrayWrapper::funcs){
+        wrapper_types_cache.push_back(v.second);
+    }
+
+    for(auto& v : StringWrapper::funcs){
+        wrapper_types_cache.push_back(v.second);
+    }
 }
 
 RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
@@ -79,39 +88,30 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
         case NumericExpressionType:
             return RunTimeFactory::makeNum(static_cast<NumericExpression*>(stmt)->num);
         case StringExpressionType:
-            return RunTimeFactory::makeString(
-                (static_cast<StringExpression*>(stmt)->str));
+            return StringWrapper::genObject(RunTimeFactory::makeString(
+                (static_cast<StringExpression*>(stmt)->str)));
         case BooleanExpressionType:
             return RunTimeFactory::makeBool(static_cast<BoolExpression*>(stmt)->val);
         case LambdaExpressionType:{
-            auto stm = static_cast<LambdaExpression*>(stmt);
-            return RunTimeFactory::makeLambda((stm->params), (stm->stmts),
-                std::move(current_scope->flatten()));
+            return Util::SigmaInterpreterHelper::evaluateLambda(current_scope, stmt);
         }
+        case CharExpressionType:
+            return RunTimeFactory::makeChar(static_cast<CharExpression*>(stmt)->character);
         case ArrayExpressionType:{
             auto stm = static_cast<ArrayExpression*>(stmt);
-            std::vector<RunTimeVal*> vals(stm->exprs.size());
-            std::transform(stm->exprs.begin(), stm->exprs.end(), vals.begin(),
-                [this](Expr expr){ return evaluate(expr); });
-            return RunTimeFactory::makeArray(std::move(vals));
+            std::vector<RunTimeVal*> results;
+            for(auto& expr : stm->exprs){
+                results.push_back(copyIfRecommended(evaluate(expr)));
+            }
+            return ArrayWrapper::genObject(
+                RunTimeFactory::makeArray(std::move(results)));
         }
         case StructExpressionType:{
             auto stm = static_cast<StructExpression*>(stmt);
-            if(!struct_decls.contains(stm->struct_name))
-                throw std::runtime_error("no struct with name " + stm->struct_name);
-            std::vector<VariableDecleration*> vecc = struct_decls[stm->struct_name];
-            std::unordered_map<std::string, RunTimeVal*> vals;
-
-            for(int i = 0; i < stm->args.size(); i++){
-                vals.insert({ vecc[i]->var_name, evaluate(stm->args[i]) });
-            }
-
-            for(int k = stm->args.size(); k < vecc.size(); k++){
-                vals.insert({ vecc[k]->var_name, evaluate(vecc[k]->expr)  });
-            }
-
-            return RunTimeFactory::makeStruct(std::move(vals));
+            return Util::SigmaInterpreterHelper::evaluateStruct(this, stm);
         }
+        case JsObjectExprType:
+            return evaluateJsObjectExpression(static_cast<JsObjectExpression*>(stmt));
         case BinaryExpressionType:
             return evaluateBinaryExpression(static_cast<BinaryExpression*>(stmt));
         case ProgramType:
@@ -123,19 +123,8 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
         case FunctionCallExpressionType:
             return evaluateFunctionCallExpression(static_cast<FunctionCallExpression*>(stmt));
         case IdentifierExpressionType:{
-            std::string target = static_cast<IdentifierExpression*>(stmt)->str;
-            auto sc = current_scope->traverse(this_str);
-            if(sc){
-                auto val = sc->variables[this_str].value;
-                if(val->type == StructType){
-                    auto vall = static_cast<StructVal*>(
-                        current_scope->getVal(this_str));
-                    if(vall->vals.contains(target)){
-                        return vall->vals[target];
-                    }
-                }
-            }
-            return current_scope->getVal(static_cast<IdentifierExpression*>(stmt)->str);
+            IdentifierExpression* target = static_cast<IdentifierExpression*>(stmt);
+            return Util::SigmaInterpreterHelper::evaluteIdentifier(this, target);
         }
         case IfStatementType:
             return evaluateIfStatement(static_cast<IfStatement*>(stmt));
@@ -169,90 +158,45 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
 };
 
 RunTimeValue SigmaInterpreter::evaluateIfStatement(IfStatement* if_stmt) {
-    auto expr = evaluate(if_stmt->expr);
-    if(expr->type != BoolType)
+    RunTimeVal* if_stmt_expr_val = evaluate(if_stmt->expr);
+
+    if(if_stmt_expr_val->type != BoolType)
         throw std::runtime_error("if statement expression must result in a boolean value");
-    if(static_cast<BoolVal*>(expr)->boolean){
-        auto scope = std::make_shared<Scope>(current_scope);
-        current_scope = scope;
 
-        for(auto& stmt : if_stmt->stmts){
-            auto result = evaluate(stmt);
-            if(!result) continue;
-            if(break_out_types.contains(result->type)){
-                current_scope = current_scope->parent;
-                return result;
-            }
-        }
+    if(static_cast<BoolVal*>(if_stmt_expr_val)->boolean)
+        return Util::SigmaInterpreterHelper::evaluateIfCodeBlock(this, if_stmt->stmts);
 
-        current_scope = current_scope->parent;
-    } else {
-        for(auto& else_if_stmt : if_stmt->else_if_stmts){
-            auto else_if_expr = evaluate(if_stmt->expr);
+    for(auto& else_if_stmt : if_stmt->else_if_stmts){
+        RunTimeVal* else_if_expr_val = evaluate(if_stmt->expr);
 
-            if(else_if_expr->type != BoolType){
-                throw std::runtime_error("elseif statement expression must result in a boolean value"); 
-            } 
-        
-            if(static_cast<BoolVal*>(else_if_expr)->boolean){
-                auto scope = std::make_shared<Scope>(current_scope);
-                current_scope = scope;
-
-                for(auto& stmt : else_if_stmt->stmts){
-                    auto result = evaluate(stmt);
-                    if(!result) continue;
-                    if (break_out_types.contains(result->type)) {
-                      current_scope = current_scope->parent;
-                      return result;
-                    }
-                }
-
-                current_scope = current_scope->parent;
-                return nullptr;
-            
-            }
-        }
-
-        if(if_stmt->else_stmt) {
-            auto scope = std::make_shared<Scope>(current_scope);
-            current_scope = scope;
-
-            for(auto& stmt : if_stmt->else_stmt->stmts){
-                auto result = evaluate(stmt);
-                if(!result) continue;
-                if (break_out_types.contains(result->type)) {
-                  current_scope = current_scope->parent;
-                  return result;
-                }
-            }
-
-            current_scope = current_scope->parent;
-            return nullptr; 
+        if(else_if_expr_val->type != BoolType){
+            throw std::runtime_error("elseif statement expression must result in a boolean value"); 
+        } 
+    
+        if(static_cast<BoolVal*>(else_if_expr_val)->boolean){
+            return Util::SigmaInterpreterHelper::evaluateIfCodeBlock(this,
+                else_if_stmt->stmts);
         }
     }
 
-    return nullptr;
+    if(!if_stmt->else_stmt)
+        return nullptr;
+
+    return Util::SigmaInterpreterHelper::evaluateIfCodeBlock(this,
+        if_stmt->else_stmt->stmts);
 };
 RunTimeValue SigmaInterpreter::evaluateWhileLoopStatement(WhileLoopStatement* while_loop) {
-    auto scope = std::make_shared<Scope>(current_scope);
-    current_scope = scope;
+    auto evaluation_scope = std::make_shared<Scope>(current_scope);
+    current_scope = evaluation_scope;
     while(static_cast<BoolVal*>(evaluate(while_loop->expr))->boolean){
 
         bool gonna_break = false;
-        for(auto& stmt : while_loop->stmts){
-            auto result = evaluate(stmt);
-            if(!result) continue;
-            if(result->type == BreakType){
-                gonna_break = true;
-                break;
-            }
-            if(result->type == ContinueType)
-                break;
-            if(result->type == ReturnType){
-                current_scope = current_scope->parent;
-                return result;
-            }
-        }
+
+        auto eval_result = Util::SigmaInterpreterHelper::evaluteLoopCodeBlock(this,
+            while_loop->stmts, gonna_break);
+        
+        if(eval_result)
+            return eval_result;
 
         if(gonna_break) break;
         current_scope->variables.clear();
@@ -263,32 +207,26 @@ RunTimeValue SigmaInterpreter::evaluateWhileLoopStatement(WhileLoopStatement* wh
 RunTimeValue SigmaInterpreter::evaluateForLoopStatement(ForLoopStatement* for_loop) {
     auto scope = std::make_shared<Scope>(current_scope);
     current_scope = scope;
+
     if(for_loop->first_stmt)
         evaluate(for_loop->first_stmt);
 
-    auto sc = std::make_shared<Scope>(current_scope);
-    current_scope = sc;
+    auto evaluation_scope = std::make_shared<Scope>(current_scope);
+    current_scope = evaluation_scope;
+
     bool gonna_break = false;
-    while(static_cast<BoolVal*>(evaluate(for_loop->expr))->boolean){
 
+    while(for_loop->expr ? static_cast<BoolVal*>(evaluate(for_loop->expr))->boolean : true){
 
-        for(auto& stmt : for_loop->stmts){
-            auto result = evaluate(stmt);
-            if(!result) continue;
-            if(result->type == BreakType){
-                gonna_break = true;
-                break;
-            }
-            else if (result->type == ContinueType)
-                break;
-            else if (result->type == ReturnType){
-                current_scope = current_scope->parent;
-                current_scope = current_scope->parent;
-                return result;
-            }
-        }
-        if(gonna_break){
+        RunTimeVal* eval_result = Util::SigmaInterpreterHelper::evaluteLoopCodeBlock(this,
+            for_loop->stmts, gonna_break);
+        
+        if(eval_result){
             current_scope = current_scope->parent;
+            return eval_result;
+        }
+
+        if(gonna_break){
             break;
         }
 
@@ -298,6 +236,7 @@ RunTimeValue SigmaInterpreter::evaluateForLoopStatement(ForLoopStatement* for_lo
         if(!current_scope->variables.empty())
             current_scope->variables.clear();    
     }
+
     current_scope = current_scope->parent;
     current_scope = current_scope->parent;
 
@@ -307,16 +246,23 @@ RunTimeValue SigmaInterpreter::evaluateForLoopStatement(ForLoopStatement* for_lo
 RunTimeValue SigmaInterpreter::evaluateProgram(SigmaProgram* program) {
     initialize();
     auto v = static_cast<ForLoopStatement*>(program->stmts[0]);
-    for(auto& stmt : program->stmts){
-        evaluate(stmt);
+    try{
+        for(auto& stmt : program->stmts){
+            evaluate(stmt);
+        }
+    } catch(std::exception& err){
+        return RunTimeFactory::makeString(err.what());
     }
 
-    return nullptr;
+    return RunTimeFactory::makeNum(0);
 };
 
 RunTimeValue SigmaInterpreter::evaluateBinaryExpression(BinaryExpression* expr) {
     auto left = evaluate(expr->left);
+    Util::SigmaInterpreterHelper::cvtToPrimitiveIfWrapper(&left);
+
     auto right = evaluate(expr->right);
+    Util::SigmaInterpreterHelper::cvtToPrimitiveIfWrapper(&right);
 
     if(left->type == NumType && right->type == NumType){
         auto l = static_cast<NumVal*>(left);
@@ -337,7 +283,7 @@ RunTimeValue SigmaInterpreter::evaluateBinaryExpression(BinaryExpression* expr) 
     }
 
     throw std::runtime_error("Binary Operators Not Implemented For Operands " + 
-        std::to_string((int)left->type) + "," + std::to_string((int)right->type));
+        type_to_string_table.at(left->type) + "," + type_to_string_table.at(right->type));
 };
 
 RunTimeValue SigmaInterpreter::evaluateVariableDeclStatement(VariableDecleration* decl) {
@@ -353,42 +299,60 @@ RunTimeValue SigmaInterpreter::evaluateVariableDeclStatement(VariableDecleration
 };
 
 RunTimeValue SigmaInterpreter::evaluateVariableReInitStatement(VariableReInit* decl) {
-    auto scc = current_scope->traverse(this_str);
-    if(scc){
-        auto this_val = scc->variables[this_str].value;
+    // extensive comments cause the level of the complexity
+
+    // checking if there's a valid 'this' in any scope
+    // ( if 'this' is valid it means that we are in a member function )
+    // and if its valid it also means that we should check if the 'this'
+    // object includes the variable which we wanna reinitialize
+    // so we can implictly add the 'this.' before the variable name :pray:
+    auto this_keyword_scope = current_scope->traverse(this_str);
+    if(this_keyword_scope){
+        // checking if the 'this' is actually an object
+        auto this_val = this_keyword_scope->variables[this_str].value;
         if(this_val->type == StructType){
-            auto vall = static_cast<StructVal*>(
+            // casting to an object value
+            auto vall = static_cast<ObjectVal*>(
                 this_val);
+            // checking if the 'this' object has the variable name which we are
+            // trying to reinitialize
             if(vall->vals.contains(decl->var_name)){
-                auto v = evaluate(decl->expr);
-                auto stru = static_cast<StructVal*>(this_val);
-                if(stru->vals[decl->var_name]->type == RefrenceType){
-                    auto actual_ref = static_cast<RefrenceVal*>(stru->vals[decl->var_name]);
-                    *actual_ref->val = v;
+
+                // basic reinializement logic
+                RunTimeVal* new_value = evaluate(decl->expr);
+                ObjectVal* this_struct = static_cast<ObjectVal*>(this_val);
+
+                if(this_struct->vals[decl->var_name]->type == RefrenceType){
+                    auto actual_ref = static_cast<RefrenceVal*>(this_struct->vals[decl->var_name]);
+                    *actual_ref->val = new_value;
                     return nullptr;
                 }
-                if(shouldICopy(v))
-                    stru->vals[decl->var_name]->setValue(v);
+                if(shouldICopy(new_value))
+                    this_struct->vals[decl->var_name]->setValue(new_value);
                 else {
-                    stru->vals[decl->var_name] = v;
+                    this_struct->vals[decl->var_name] = new_value;
                 }
                 return nullptr;
             }
         }
     }
-    auto ac_v = evaluate(decl->expr);
-    auto v = current_scope->getVal(decl->var_name);
-    if(v->type == RefrenceType){
+
+    // repeated basic intializement logic ( im a bit lazy )
+    RunTimeVal* target_value = evaluate(decl->expr);
+    RunTimeVal* previous_val = current_scope->getVal(decl->var_name);
+
+    if(previous_val->type == RefrenceType){
         auto actual_ref = 
-            static_cast<RefrenceVal*>(v);
-        *actual_ref->val = (ac_v);
+            static_cast<RefrenceVal*>(previous_val);
+        *actual_ref->val = (target_value);
         return nullptr;
     }
-    if(shouldICopy(v)){
-        v->setValue(ac_v);
+    if(shouldICopy(previous_val)){
+        previous_val->setValue(target_value);
         return nullptr;
     }
-    current_scope->reInitVar(decl->var_name, (ac_v));
+    current_scope->reInitVar(decl->var_name, target_value);
+
     return nullptr;
 };
 
@@ -400,64 +364,71 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(FunctionCallExpres
     if(func->type == LambdaType)
     std::transform(expr->args.begin(), expr->args.end(), args.begin(),
         [this](Expr expr)-> RunTimeVal* { 
-            auto va = evaluate(expr);
-            return copyIfRecommended(va);
+            RunTimeVal* val = evaluate(expr);
+            return copyIfRecommended(val);
         });
     else if(func->type == NativeFunctionType){
         StdLib::current_calling_scope = current_scope;
-        std::transform(expr->args.begin(), expr->args.end(), args.begin(),
-        [this](Expr expr){ 
-            auto va = evaluate(expr);
-            return va;
-        });
+        args = Util::SigmaInterpreterHelper::evaluateExprVectorForCompiledFunctions(this,
+            expr->args);
     }
-    // if(expr->func_expr->type == IdentifierExpressionType){
-    //     std::string name = static_cast<IdentifierExpression*>(expr->func_expr)->str;
-    //     std::cout << "Function name: " << name << std::endl;
-    //     if(native_functions.contains(name)){    
-    //         return native_functions[name](args);
-    //     }
-    // }
-    
+
     if(func->type == NativeFunctionType){
-        auto sc = std::make_shared<Scope>(current_scope);
+        auto new_scope = std::make_shared<Scope>(current_scope);
         auto last_sc = current_scope;
-        current_scope = sc;
+        current_scope = new_scope;
+        
         if(expr->func_expr->type == MemberAccessExpressionType){
-            auto mem_expr = static_cast<MemberAccessExpression*>(expr->func_expr)->clone_expr();
+            MemberAccessExpression* mem_expr = static_cast<MemberAccessExpression*>(
+                expr->func_expr)->clone_expr();
             mem_expr->path.pop_back();
-            auto mem_val = evaluate(mem_expr);
+            RunTimeVal* mem_val = evaluate(mem_expr);
             current_scope->declareVar(this_str, { mem_val, true });
         }
-        auto ac_func = static_cast<NativeFunctionVal*>(func);
-        auto ac_vv = ac_func->func(args, this);
+        
+        Util::SigmaInterpreterHelper::verifyCompiledFunctionCallArgs(
+            this, expr, args, func);
+
+        NativeFunctionVal* func_val = static_cast<NativeFunctionVal*>(func); 
+
+        auto ret = func_val->func(args, this);
         current_scope = last_sc;
         StdLib::current_calling_scope = nullptr;
-        return ac_vv;
+        return ret;
     }
-    if (func->type != LambdaType)
-      throw std::runtime_error(std::format("{} is not a callable", (int)func->type));
+    if (func->type != LambdaType){
+        throw std::runtime_error(std::format("{} is not a callable", (int)func->type));
+    }
     auto actual_func = static_cast<LambdaVal*>(func);
     
     auto last_scope = current_scope;
 
     auto arg_scope = std::make_shared<Scope>(current_scope);
     current_scope = arg_scope;
+
     for (int i = 0; i < args.size(); i++) {
       current_scope->declareVar(actual_func->params[i], {args[i], false});
     }
-    // for(auto& [var_name, var_val] : actual_func->captured){
-    //     if(!current_scope->variables.contains(var_name))
-    //         current_scope->declareVar(var_name, {var_val, true});
-    // }
+
+    for(auto& [var_name, var_val] : actual_func->captured){
+         if(!current_scope->traverse(var_name))
+             current_scope->declareVar(var_name, {var_val, true});
+    }
+
+    // making the 'this' keyword valid
+    
+    // getting the object by basically removing the latest member access string
+    // and evaluating the remaining ( some tricks are applied )
     if(expr->func_expr->type == MemberAccessExpressionType){
-        auto mem_expr = static_cast<MemberAccessExpression*>(expr->func_expr);
+        auto mem_expr = static_cast<MemberAccessExpression*>(expr->func_expr)->clone_expr();
+        
         mem_expr->path.pop_back();
+        
         current_scope = last_scope;
         auto mem_val = evaluate(mem_expr);
         current_scope = arg_scope;
+        
         current_scope->declareVar(this_str, { mem_val, true });
-
     }
 
     auto func_scope = std::make_shared<Scope>(current_scope);
@@ -484,7 +455,9 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(FunctionCallExpres
 
 RunTimeValue SigmaInterpreter::
     evaluateIndexAccessExpression(IndexAccessExpression* expr) {
-    auto val = evaluate(expr->array_expr);
+    RunTimeVal* val = dynamic_cast<ObjectVal*>(evaluate(expr->array_expr));
+
+    Util::SigmaInterpreterHelper::cvtToPrimitiveIfWrapper(&val);
     
     for(auto& num : expr->path){
         
@@ -493,10 +466,11 @@ RunTimeValue SigmaInterpreter::
         if(numb->type != NumType) throw std::runtime_error("operator [] excepts a number");
 
         auto real_num = static_cast<NumVal*>(numb);
+
         if(val->type == StringType){
             auto real_val = static_cast<StringVal*>(val);    
             if(real_num->num >= real_val->str.size()) throw std::runtime_error("out of bounds array index");
-            val = RunTimeFactory::makeString(std::string(1, real_val->str[static_cast<int>(real_num->num)]));
+            val = RunTimeFactory::makeChar(real_val->str[static_cast<int>(real_num->num)]);
             return val;
         }
 
@@ -505,6 +479,8 @@ RunTimeValue SigmaInterpreter::
 
         if(real_num->num >= real_val->vals.size()) throw std::runtime_error("out of bounds array index");
         val = real_val->vals[static_cast<int>(real_num->num)];
+
+        Util::SigmaInterpreterHelper::cvtToPrimitiveIfWrapper(&val);
     }
 
 
@@ -518,7 +494,7 @@ RunTimeValue SigmaInterpreter::
     for(auto& str : expr->path){
         if(val->type != StructType) throw std::runtime_error("operator . must be used on an object the current type is: " + 
             std::to_string(val->type));
-        auto real_val = static_cast<StructVal*>(val);
+        auto real_val = static_cast<ObjectVal*>(val);
 
         if(!real_val->vals.contains(str)) throw std::runtime_error("member " + str + " not found in an object");
         
@@ -531,21 +507,26 @@ RunTimeValue SigmaInterpreter::
 };
 
 RunTimeValue SigmaInterpreter::evaluateIndexReInitStatement(IndexReInitStatement* stmt) {
-    auto val = evaluate(stmt->array_expr);
+    RunTimeVal* val = dynamic_cast<ObjectVal*>(evaluate(stmt->array_expr));
+
+    Util::SigmaInterpreterHelper::cvtToPrimitiveIfWrapper(&val);
+
     auto latest_num = 
         static_cast<NumVal*>(evaluate(stmt->path.back()));
-    stmt->path.pop_back();
+    auto p = stmt->path;
+    p.pop_back();
 
-    for(auto& num : stmt->path){
+    for(auto& num : p){
         val = static_cast<ArrayVal*>(val)->vals[
             static_cast<int>(static_cast<NumVal*>(evaluate(num))->num)
         ];
+        Util::SigmaInterpreterHelper::cvtToPrimitiveIfWrapper(&val);
     }
 
     if(val->type == StringType){
         auto latest_val = static_cast<StringVal*>(val);
         latest_val->str[static_cast<int>(latest_num->num)] = 
-            static_cast<StringVal*>(evaluate(stmt->val))->str[0]; 
+            static_cast<CharVal*>(evaluate(stmt->val))->ch; 
         return nullptr;
     }
     auto latest_val = static_cast<ArrayVal*>(val);
@@ -646,7 +627,7 @@ RunTimeValue SigmaInterpreter::evaluateStringBinaryExpression(StringVal* left,
     if(op == "<=")
         return RunTimeFactory::makeBool(left->str <= right->str);
     if(op == "+")
-        return RunTimeFactory::makeString(left->str + right->str);
+        return StringWrapper::genObject(RunTimeFactory::makeString(left->str + right->str));
 
     throw std::runtime_error("operator " + op + " isn't valid between operands String, String");
 };
@@ -666,12 +647,12 @@ RunTimeValue SigmaInterpreter::evaluateMemberReInitStatement(
     path_copy.pop_back();
 
     for(auto& str : path_copy){
-        val = static_cast<StructVal*>(val)->vals[
+        val = static_cast<ObjectVal*>(val)->vals[
             str
         ];
     }
 
-    auto latest_val = static_cast<StructVal*>(val);
+    auto latest_val = static_cast<ObjectVal*>(val);
     if(latest_val->vals[latest_str]->type == RefrenceType){
         auto v = static_cast<RefrenceVal*>(latest_val->vals[latest_str]);
         *v->val = evaluate(expr);
@@ -686,7 +667,7 @@ RunTimeValue SigmaInterpreter::evaluateMemberReInitStatement(
     return nullptr;
 };
 
-
+// some garbage code i guess
 RunTimeValue SigmaInterpreter::evaluateIncrementExpression(IncrementExpression* expr) {
     auto current_val = evaluate(expr->expr);
 
@@ -722,6 +703,8 @@ RunTimeValue SigmaInterpreter::evaluateIncrementExpression(IncrementExpression* 
     }
     return RunTimeFactory::makeNum(actual_val + expr->amount);
 };
+// no implementation cause the decrement expression is basically an increment but 
+// adding -1 instead of 1
 RunTimeValue SigmaInterpreter::evaluateDecrementExpression(DecrementExpression* expr) {
     return {};
 };
@@ -734,34 +717,12 @@ RunTimeValue SigmaInterpreter::evaluateNegativeExpression(NegativeExpression* ex
 
     return RunTimeFactory::makeNum(-num);
 };
-RunTimeValue SigmaInterpreter::evaluateHtmlStr(StringExpression* expr){
-    Lexer lexer;
-    Parser parser;
-    auto tokens = lexer.tokenize(expr->str);
-    Program ast_representation = parser.produceAst(tokens);
+RunTimeVal* SigmaInterpreter::evaluateJsObjectExpression(JsObjectExpression* expr) {
+    std::unordered_map<std::string, RunTimeVal*> values;
 
-    std::vector<RunTimeVal*> html_elms(ast_representation.html_tags.size());
-    std::vector<RunTimeVal*> style_srcs(ast_representation.style_srcs.size());
-    std::vector<RunTimeVal*> script_srcs(ast_representation.script_srcs.size());
+    for(auto& [name, val]: expr->exprs){
+        values.insert({name, evaluate(val)->clone()});
+    }
 
-    std::transform(ast_representation.html_tags.begin(), ast_representation.html_tags.end(),
-        html_elms.begin(), [](std::shared_ptr<HTMLTag> elm)-> HtmlElementVal* { 
-            return RunTimeFactory::makeHtmlElement(elm.get());
-        });
-    std::transform(ast_representation.script_srcs.begin(), ast_representation.script_srcs.end(),
-        script_srcs.begin(), [](std::string str){ 
-            return RunTimeFactory::makeString(str);
-        });
-    std::transform(ast_representation.style_srcs.begin(), ast_representation.style_srcs.end(),
-        style_srcs.begin(), [](std::string str){ 
-            return RunTimeFactory::makeString(str);
-        });
-    
-    std::unordered_map<std::string, RunTimeVal*> struct_map = {
-        {"elements", RunTimeFactory::makeArray(std::move(html_elms))},
-        {"style_srcs", RunTimeFactory::makeArray(std::move(style_srcs))},
-        {"script_srcs", RunTimeFactory::makeArray(std::move(script_srcs))}
-    };
-
-    return RunTimeFactory::makeStruct(std::move(struct_map));
+    return RunTimeFactory::makeStruct(std::move(values));
 };

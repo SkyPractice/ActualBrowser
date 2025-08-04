@@ -47,6 +47,7 @@ public:
     Expr parseArrayExpr();
     Expr parseIndexExpr(Expr arr);
     Expr parseStructExpr();
+    Expr parseJsObjectExpr();
     Expr parseMemberAccessExpr(Expr struc);
     
 

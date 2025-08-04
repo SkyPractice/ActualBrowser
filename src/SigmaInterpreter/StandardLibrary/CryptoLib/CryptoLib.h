@@ -3,7 +3,7 @@
 
 class CryptoLib : public StdLib {
 public:
-    static StructVal* getStruct();
+    static ObjectVal* getStruct();
 
     static RunTimeValue Sha256Wrapper(std::vector<RunTimeValue>& args, SigmaInterpreter*);
     static RunTimeValue Sha512Wrapper(std::vector<RunTimeValue>& args, SigmaInterpreter*);

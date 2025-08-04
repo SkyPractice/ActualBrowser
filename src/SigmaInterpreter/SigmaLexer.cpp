@@ -48,6 +48,14 @@ std::vector<SigmaToken> SigmaLexer::tokenize(std::string& code) {
 
             tokens.push_back({ Str, str });
         }
+        else if (current_char == '\''){
+            std::string str;
+            advance();
+            str.push_back(current_char);
+            advance();
+            
+            tokens.push_back({Char, str});
+        }
         else if (isdigit(current_char)){
             std::string str;
 

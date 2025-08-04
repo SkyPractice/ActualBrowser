@@ -5,17 +5,25 @@
 #include <gdkmm/display.h>
 #include <glibmm/refptr.h>
 #include <gtkmm/box.h>
+#include <gtkmm/enums.h>
 #include <gtkmm/label.h>
 #include <gtkmm/cssprovider.h>
 #include <glibmm/refptr.h>
+#include <gtkmm/messagedialog.h>
+#include <gtkmm/window.h>
 #include <memory>
 #include <filesystem>
 #include "../SigmaInterpreter/SigmaLexer.h"
 #include "../SigmaInterpreter/SigmaParser.h"
 #include "../SigmaInterpreter/SigmaInterpreter.h"
 #include <iostream>
+#include <string>
 #include <unordered_map>
+#include <vector>
 #include "../SigmaInterpreter/GarbageCollector/GarbageCollector.h"
+#include "../SigmaInterpreter/Util/Permissions/Permissions.h"
+#include "../SigmaInterpreter/PreProcessor/PreProcessor.h"
+#include "../SigmaInterpreter/StandardLibrary/WindowLib/WindowLib.h"
 
 namespace fs = std::filesystem;
 
@@ -32,6 +40,7 @@ public:
     SigmaLexer scripting_lexer;
     SigmaParser scripting_parser;
     SigmaInterpreter scripting_interpreter;
+    Gtk::Window* target_window = nullptr;
     Lexer lexer;
     Parser parser;
 
@@ -58,7 +67,12 @@ public:
         accessor = {.class_name_ptrs=class_name_ptrs, .id_ptrs=id_ptrs, .current_interp=this};
         scripting_interpreter.accessor = &accessor;
     }
-    void renderTags(Gtk::Box* target_box, Program tags) {
+    void renderTags(Gtk::Box* target_box, Program tags, std::string document_or_host) {
+        PermissionContainer old_perms;
+        std::string perms_file_path = "./Config/Permissions/" + document_or_host;
+        if(std::filesystem::exists(perms_file_path)){
+            old_perms = PermissionFileController::readPermsFromFile(perms_file_path);
+        }
         reset();
         current_tags.clear();
         for(auto& tag : tags.html_tags){
@@ -81,7 +95,7 @@ public:
         accessor = { class_name_ptrs, id_ptrs, this };
         current_tags = tags.html_tags;
         for(auto& tag : flattened_tags){
-            if(tag->type == Stylee){
+            if(tag->tag_information.type == Stylee){
                 auto style_tag = std::dynamic_pointer_cast<StyleTag>(tag);
                 if(fs::exists(style_tag->src)){
                     auto provider = Gtk::CssProvider::create();
@@ -90,7 +104,7 @@ public:
                      GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
                      css_providers.push_back(provider);
                 }
-            } else if (tag->type == Scriptt){
+            } else if (tag->tag_information.type == Scriptt){
                 auto script_tag = std::dynamic_pointer_cast<ScriptTag>(tag);
                 if(fs::exists(script_tag->src)){
                     std::ifstream file_stream(script_tag->src, std::ios::ate);
@@ -104,20 +118,45 @@ public:
 
                     file_stream.close();
 
+                    PreProcessor preprocessor;
+                    std::string& src = script_tag->src;
+                    if(src.rfind('/') != std::string::npos){
+                        std::string parent_dir = src.substr(0, src.rfind('/'));
+                        preprocessor.code_dir = parent_dir;
+                    }
+                    else { preprocessor.code_dir = "./"; }
+
+                    preprocessor.processCode(code);
+
                     std::cout << "Reached Lexing" << std::endl;
                     auto tokens = scripting_lexer.tokenize(code);
                     std::cout << "Successfully Lexed" << std::endl;
                     auto ast = scripting_parser.produceAst(tokens);
                     std::cout << "Successfully parsed" << std::endl;
+
+                    scripting_interpreter.current_window = target_window;
                     scripting_interpreter.accessor = &accessor;
+                    scripting_interpreter.initialize();
+                    scripting_interpreter.perms = old_perms;
+                    scripting_interpreter.doc_name = document_or_host;
+
                     auto result = scripting_interpreter.evaluate(ast);
-                    SigmaParser::memory_pool.release();
-                    GarbageCollector::alive_vals.clear();
-                    RunTimeMemory::pool.release();
+
+                    if(result->type == StringType){
+                        auto casted_result = static_cast<StringVal*>(result);
+                        WindowLib::showAlert({"Error While Executing A Script",
+                            casted_result->str, target_window, 
+                            {{"ok", [](Gtk::Dialog* dialo){dialo->close();}}}});
+                    }
+                    std::vector<RunTimeVal*> mark_vals = scripting_interpreter.getAccessibleValues();
+                    GarbageCollector::mark(mark_vals);
+                    GarbageCollector::sweep(RunTimeMemory::pool);
+                    old_perms = scripting_interpreter.perms;
                 }
             }
         }
         current_tags = tags.html_tags;
+        PermissionFileController::writePermsToFile(perms_file_path, old_perms);
     };
 
     void reset(){
@@ -126,8 +165,14 @@ public:
                 prov);
         }
         css_providers.clear();
+        scripting_interpreter.registered_event_handlers.clear();
+        GarbageCollector::sweep(RunTimeMemory::pool);
+        SigmaParser::memory_pool.release();
     }
 
+    std::shared_ptr<HTMLTag> cloneHtmlTagWithoutRendering() {
+        return nullptr;
+    };
 
 
 };

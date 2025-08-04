@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <filesystem>
 #include <gtkmm/window.h>
 #include "HttpManager/HttpManager.h"
 #include "GUI/Window.h"
@@ -13,6 +14,13 @@ boost::asio::thread_pool Concurrency::pool = boost::asio::thread_pool(4);
 int main(int argc, char** argv){
     srand(time(0));
     RunTimeFactory::target_alloc_vec = &GarbageCollector::alive_vals;
+    if(!std::filesystem::exists("Config")){
+        std::filesystem::create_directory("Config");
+    }
+    if(!std::filesystem::exists("./Config/Permissions")){
+        std::filesystem::create_directory("./Config/Permissions");
+    }
+    
     ERR_load_crypto_strings();
     OpenSSL_add_all_algorithms();
     try{

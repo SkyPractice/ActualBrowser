@@ -32,7 +32,7 @@ class ConsoleLib {
 public:
     static std::unordered_map<std::string_view, std::string_view> colorMap;
 
-    static StructVal* getStruct();
+    static ObjectVal* getStruct();
 
     static RunTimeValue print(std::vector<RunTimeValue>& args, SigmaInterpreter*);
     static RunTimeValue println(std::vector<RunTimeValue>& args, SigmaInterpreter*);

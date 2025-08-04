@@ -17,13 +17,15 @@
 #include "../Interpreter/Lexer.h"
 #include "../Interpreter/Parser.h"
 #include "Cryptography.h"
+#include "StandardLibrary/TypeWrappers/StringWrapper.h"
+#include "Util/Util.h"
 
 typedef RunTimeVal* RunTimeValue;
 
 RunTimeValue SigmaInterpreter::toString(std::vector<RunTimeValue>& args) {
     if(args.size() > 0){
-        return RunTimeFactory::makeString(args[0]->getString());
-    } else return RunTimeFactory::makeString("");
+        return StringWrapper::genObject(RunTimeFactory::makeString(args[0]->getString()));
+    } else return StringWrapper::genObject(RunTimeFactory::makeString(""));
 };
 
 // args -> [0] : size, [1] : start
@@ -32,7 +34,7 @@ RunTimeValue SigmaInterpreter::numIota(std::vector<RunTimeValue>& args) {
 };
 
 RunTimeValue SigmaInterpreter::clone(std::vector<RunTimeValue>& args) {
-    return args[0]->clone();
+    return Util::SigmaInterpreterHelper::cvtToWrapperIfPossible(args[0]->clone());
 };
 
 RunTimeValue SigmaInterpreter::getCurrentTimeMillis(std::vector<RunTimeValue>& args) {
@@ -44,39 +46,27 @@ RunTimeValue SigmaInterpreter::getCurrentTimeMillis(std::vector<RunTimeValue>& a
 };
 
 
-RunTimeValue SigmaInterpreter::getElementById(std::vector<RunTimeValue>& args) {
-    std::string id = dynamic_cast<StringVal*>(args[0])->str;
-    return RunTimeFactory::makeHtmlElement(accessor->id_ptrs.at(id).get());
-};
-RunTimeValue SigmaInterpreter::setElementInnerHtml(std::vector<RunTimeValue>& args){
-    auto html_elm = dynamic_cast<HtmlElementVal*>(args[0]);
-    Lexer lex;
-    Parser pars;
-    Interpreter interpret;
-    std::string html_str = dynamic_cast<StringVal*>(args[1])->str;
-    
-    auto tokens = lex.tokenize(html_str);
-    auto ast_val = pars.produceAst(tokens);
-    for(auto& child : html_elm->target_tag->children)
-        child->unRender();
-    html_elm->target_tag->setChildren(ast_val.html_tags);
-    interpret.renderTags(dynamic_cast<Gtk::Box*>(html_elm->target_tag->current_widget), ast_val);
-    accessor->current_interp->refreshIdsAndClasses();
-    return nullptr;
+RunTimeVal* SigmaInterpreter::getStringASCII(std::vector<RunTimeVal*>& args) {
+  StringVal* str_val = dynamic_cast<StringVal*>(args[0]);
+
+  double sum = std::accumulate(str_val->str.begin(), str_val->str.end(), 0);
+
+  return RunTimeFactory::makeNum(sum);
 };
 
-RunTimeValue SigmaInterpreter::getElementsByClassName(std::vector<RunTimeValue>& args) {
-    std::string cl = dynamic_cast<StringVal*>(args[0])->str;
-    auto elms = accessor->class_name_ptrs.equal_range(cl);
-    auto [beg_itr, end_itr] = elms;
+RunTimeVal* SigmaInterpreter::toNum(std::vector<RunTimeVal*>& args){
+  BoolVal* bool_v = dynamic_cast<BoolVal*>(args[0]);
+  if(bool_v) return RunTimeFactory::makeNum(bool_v ? 1 : 0);
 
-    std::vector<RunTimeValue> results;
-    for(auto itr = beg_itr; itr != end_itr; itr++){
-        results.push_back(RunTimeFactory::makeHtmlElement(itr->second.get()));
-    }
+  StringVal* str_v = dynamic_cast<StringVal*>(args[0]);
 
-    return RunTimeFactory::makeArray(results);
-};
+  if(str_v) return RunTimeFactory::makeNum(std::stod(str_v->str));
+  
+  CharVal* ch_v = dynamic_cast<CharVal*>(args[0]);
+  if(ch_v) return RunTimeFactory::makeNum(ch_v->ch);
+
+  throw std::runtime_error("toNum excepts arg 0 to be bool or str or char");
+}
 
 RunTimeValue SigmaInterpreter::
     evaluateAnonymousLambdaCall(LambdaVal* lambda, std::vector<RunTimeValue> args){
@@ -115,3 +105,13 @@ RunTimeValue SigmaInterpreter::
 
     return return_val;
 }
+std::vector<RunTimeVal*> SigmaInterpreter::getAccessibleValues() {
+  std::vector<RunTimeVal*> mark_vals = current_scope->flatten_as_vec();
+  mark_vals.insert(mark_vals.end(), registered_event_handlers.
+      begin(), registered_event_handlers.end());
+  mark_vals.insert(mark_vals.end(), wrapper_types_cache.begin(), wrapper_types_cache.end());
+  for(auto& lambda : async_lambdas){
+      mark_vals.push_back(lambda.second);
+  }
+  return mark_vals;
+};

@@ -3,7 +3,7 @@
 
 class FilesLib : public StdLib {
 public:
-    static StructVal* getStruct();
+    static ObjectVal* getStruct();
 
     static RunTimeValue readFileSync(std::vector<RunTimeValue>& args, SigmaInterpreter*);
     static RunTimeValue writeFileSync(std::vector<RunTimeValue>& args, SigmaInterpreter*);

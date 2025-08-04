@@ -1,9 +1,10 @@
 #pragma once
 #include "../StdLib.h"
 
+// Compiled Functions Are Deprecated, Gonna Be Replaced By An IsArray Function . . . 
 class ArrayLib {
 public:
-    static StructVal* getStruct();
+    static ObjectVal* getStruct();
 
     static RunTimeValue resizeArray(std::vector<RunTimeValue>& args, SigmaInterpreter*);
     static RunTimeValue pushBackArray(std::vector<RunTimeValue>& args, SigmaInterpreter*);

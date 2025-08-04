@@ -1,30 +1,34 @@
 #include "FilesLib.h"
 #include <boost/asio/post.hpp>
 #include <fstream>
-#include <memory>
+#include <stdexcept>
 #include <unordered_map>
 #include "../../../Concurrency/ThreadPool.h"
 #include "../../SigmaInterpreter.h"
+#include "../TypeWrappers/StringWrapper.h"
 
-StructVal* FilesLib::getStruct() {
+ObjectVal* FilesLib::getStruct() {
     std::unordered_map<std::string, RunTimeValue> vals = {
-        {"readFileSync", RunTimeFactory::makeNativeFunction(&FilesLib::readFileSync)},
-        {"writeFileSync", RunTimeFactory::makeNativeFunction(&FilesLib::writeFileSync)},
-        {"readBinaryFileSync", RunTimeFactory::makeNativeFunction(&FilesLib::readBinaryFileSync)},
-        {"writeBinaryFileSync", RunTimeFactory::makeNativeFunction(&FilesLib::writeBinaryFileSync)},
-        {"readFileAsync", RunTimeFactory::makeNativeFunction(&FilesLib::readFileAsync)},
-        {"writeFileAsync", RunTimeFactory::makeNativeFunction(&FilesLib::writeFileAsync)},
-        {"readBinaryFileAsync", RunTimeFactory::makeNativeFunction(&FilesLib::readBinaryFileAsync)},
-        {"writeBinaryFileAsync", RunTimeFactory::makeNativeFunction(&FilesLib::writeBinaryFileAsync)}
+        {"readFileSync", RunTimeFactory::makeNativeFunction(&FilesLib::readFileSync, {{"file_path", StringType}})},
+        {"writeFileSync", RunTimeFactory::makeNativeFunction(&FilesLib::writeFileSync, {{"file_path", StringType}, {"string", StringType}})},
+        {"readBinaryFileSync", RunTimeFactory::makeNativeFunction(&FilesLib::readBinaryFileSync, {{"file_name", StringType}})},
+        {"writeBinaryFileSync", RunTimeFactory::makeNativeFunction(&FilesLib::writeBinaryFileSync, {{"file_name", StringType}, {"binary", BinaryType}})},
+        {"readFileAsync", RunTimeFactory::makeNativeFunction(&FilesLib::readFileAsync, {{"file_name", StringType}, {"handler", LambdaType}})},
+        {"writeFileAsync", RunTimeFactory::makeNativeFunction(&FilesLib::writeFileAsync, {{"file_name", StringType}, {"string", StringType}, {"handler", LambdaType}})},
+        {"readBinaryFileAsync", RunTimeFactory::makeNativeFunction(&FilesLib::readBinaryFileAsync, {{"file_name", StringType}, {"handler", LambdaType}})},
+        {"writeBinaryFileAsync", RunTimeFactory::makeNativeFunction(&FilesLib::writeBinaryFileAsync, {{"file_name", StringType}, {"binary", BinaryType}, {"handler", LambdaType}})}
     };
 
     return RunTimeFactory::makeStruct(std::move(vals));
 };
 
 RunTimeValue FilesLib::readFileSync(COMPILED_FUNC_ARGS) {
+    if(!interpreter->perms.isPermissionGranted(FileReading) && 
+        !interpreter->perms.isPermissionGranted(FileFullAccess))
+        throw std::runtime_error("Permission \'FileReading\' Not Granted!");
     if(args[0]->type != StringType) throw
         std::runtime_error("readFileSync Excepts arg 0 to be of type String");
-    std::string path = dynamic_cast<StringVal*>(args[0])->str;
+    std::string path = static_cast<StringVal*>(args[0])->str;
     if(!std::filesystem::exists(path)) 
         throw std::runtime_error("file " + path + " doesn't exist");
     std::ifstream strea(path, std::ios::ate);
@@ -34,13 +38,16 @@ RunTimeValue FilesLib::readFileSync(COMPILED_FUNC_ARGS) {
     strea.seekg(0, std::ios::beg);
     strea.read(&strr[0], s);
     strea.close();
-    return RunTimeFactory::makeString(std::move(strr));
+    return  StringWrapper::genObject(RunTimeFactory::makeString(std::move(strr)));
 };
 RunTimeValue FilesLib::writeFileSync(COMPILED_FUNC_ARGS) {
+    if(!interpreter->perms.isPermissionGranted(FileWriting) && 
+        !interpreter->perms.isPermissionGranted(FileFullAccess))
+        throw std::runtime_error("Permission \'FileWriting\' Not Granted!");
     if(args[0]->type != StringType || args[0]->type != StringType) throw
         std::runtime_error("writeFileSync Excepts arg 0 and 1 to be of type String");
-    std::string path = dynamic_cast<StringVal*>(args[0])->str;
-    std::string str = dynamic_cast<StringVal*>(args[1])->str;
+    std::string path = static_cast<StringVal*>(args[0])->str;
+    std::string str = static_cast<StringVal*>(args[1])->str;
     std::ofstream strea(path);
     strea.write(&str[0], str.size());
     strea.close();
@@ -48,8 +55,11 @@ RunTimeValue FilesLib::writeFileSync(COMPILED_FUNC_ARGS) {
 };
 
 RunTimeValue FilesLib::writeBinaryFileSync(COMPILED_FUNC_ARGS){
-    std::string path = dynamic_cast<StringVal*>(args[0])->str;
-    std::vector<unsigned char> val = dynamic_cast<BinaryVal*>(args[1])->binary_data;
+    if(!interpreter->perms.isPermissionGranted(FileReading) && 
+        !interpreter->perms.isPermissionGranted(FileFullAccess))
+        throw std::runtime_error("Permission \'FileWriting\' Not Granted!");
+    std::string path = static_cast<StringVal*>(args[0])->str;
+    std::vector<unsigned char> val = static_cast<BinaryVal*>(args[1])->binary_data;
     std::ofstream strea(path, std::ios::binary);
     size_t siz = val.size();
     strea.write(reinterpret_cast<const char*>(&siz), sizeof(size_t));
@@ -58,7 +68,10 @@ RunTimeValue FilesLib::writeBinaryFileSync(COMPILED_FUNC_ARGS){
     return RunTimeFactory::makeNum(0); // success
 };
 RunTimeValue FilesLib::readBinaryFileSync(COMPILED_FUNC_ARGS){
-    std::string path = dynamic_cast<StringVal*>(args[0])->str;
+    if(!interpreter->perms.isPermissionGranted(FileReading) && 
+        !interpreter->perms.isPermissionGranted(FileFullAccess))
+        throw std::runtime_error("Permission \'FileReading\' Not Granted!");
+    std::string path = static_cast<StringVal*>(args[0])->str;
     std::vector<unsigned char> val;
     size_t siz = 0;
     std::ifstream strea(path, std::ios::binary);
@@ -72,39 +85,43 @@ RunTimeValue FilesLib::readBinaryFileSync(COMPILED_FUNC_ARGS){
 
 RunTimeValue FilesLib::readFileAsync(COMPILED_FUNC_ARGS) {
     std::vector<RunTimeValue> actual_args = args;
-    boost::asio::post(Concurrency::pool, [args, interpreter]() mutable {
-        auto lambda_val = dynamic_cast<LambdaVal*>(args[1]);
-        SigmaInterpreter interp;
-        interp.initialize();
-        interp.evaluateAnonymousLambdaCall(lambda_val, {FilesLib::readFileSync(args, interpreter)});
+    auto lambda_val = static_cast<LambdaVal*>(args[1]);
+
+    interpreter->async_lambdas.insert({lambda_val->lambda_uuid, lambda_val});
+    boost::asio::post(Concurrency::pool, [args, interpreter, lambda_val]() mutable {
+        interpreter->evaluateAnonymousLambdaCall(lambda_val, {FilesLib::readFileSync(args, interpreter)});
+        interpreter->async_lambdas.erase(lambda_val->lambda_uuid);
     });
     return nullptr;
 };
 RunTimeValue FilesLib::writeFileAsync(COMPILED_FUNC_ARGS) {
     std::vector<RunTimeValue> actual_args = args;
-    boost::asio::post(Concurrency::pool, [args, interpreter]() mutable {
-        auto lambda_val = dynamic_cast<LambdaVal*>(args[2]);
-        SigmaInterpreter interp;
-        interp.initialize();
-        interp.evaluateAnonymousLambdaCall(lambda_val, {FilesLib::writeFileSync(args, interpreter)});
+    auto lambda_val = static_cast<LambdaVal*>(args[2]);
+
+    interpreter->async_lambdas.insert({lambda_val->lambda_uuid, lambda_val});
+    boost::asio::post(Concurrency::pool, [args, interpreter, lambda_val]() mutable {
+        interpreter->evaluateAnonymousLambdaCall(lambda_val, {FilesLib::writeFileSync(args, interpreter)});
+        interpreter->async_lambdas.erase(lambda_val->lambda_uuid);
     });
     return nullptr;
 };
 RunTimeValue FilesLib::writeBinaryFileAsync(COMPILED_FUNC_ARGS) {
-    boost::asio::post(Concurrency::pool, [args, interpreter]() mutable {
-        auto lambda_val = dynamic_cast<LambdaVal*>(args[2]);
-        SigmaInterpreter interp;
-        interp.initialize();
-        interp.evaluateAnonymousLambdaCall(lambda_val, {FilesLib::writeBinaryFileSync(args, interpreter)});
+    auto lambda_val = static_cast<LambdaVal*>(args[2]);
+    
+    interpreter->async_lambdas.insert({lambda_val->lambda_uuid, lambda_val});
+    boost::asio::post(Concurrency::pool, [args, interpreter, lambda_val]() mutable {
+        interpreter->evaluateAnonymousLambdaCall(lambda_val, {FilesLib::writeBinaryFileSync(args, interpreter)});
+        interpreter->async_lambdas.erase(lambda_val->lambda_uuid);
     });
     return nullptr;
 };
 RunTimeValue FilesLib::readBinaryFileAsync(COMPILED_FUNC_ARGS) {
-    boost::asio::post(Concurrency::pool, [args, interpreter]() mutable {
-        auto lambda_val = dynamic_cast<LambdaVal*>(args[1]);
-        SigmaInterpreter interp;
-        interp.initialize();
-        interp.evaluateAnonymousLambdaCall(lambda_val, {FilesLib::readBinaryFileSync(args, interpreter)});
+    auto lambda_val = static_cast<LambdaVal*>(args[1]);
+
+    interpreter->async_lambdas.insert({lambda_val->lambda_uuid, lambda_val});
+    boost::asio::post(Concurrency::pool, [args, interpreter, lambda_val]() mutable {
+        interpreter->evaluateAnonymousLambdaCall(lambda_val, {FilesLib::readBinaryFileSync(args, interpreter)});
+        interpreter->async_lambdas.erase(lambda_val->lambda_uuid);
     });
     return nullptr;
 };

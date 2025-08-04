@@ -5,6 +5,8 @@
 #include <memory>
 #include <memory_resource>
 #include <stdexcept>
+#include <unordered_map>
+#include <utility>
 
 std::pmr::unsynchronized_pool_resource SigmaParser::memory_pool = std::pmr::unsynchronized_pool_resource();
 
@@ -175,6 +177,9 @@ Expr SigmaParser::parsePrimaryExpr() {
         case Str:{
             return makeAst<StringExpression>(advance().symbol);
         }break;
+        case Char: {
+            return makeAst<CharExpression>(advance().symbol[0]);
+        }break;
         case True: advance(); return makeAst<BoolExpression>(true);
         case False: advance(); return makeAst<BoolExpression>(false);
         case OpenParen: {
@@ -198,6 +203,8 @@ Expr SigmaParser::parsePrimaryExpr() {
             return parseArrayExpr();
         case New:
             return parseStructExpr();
+        case OpenBrace:
+            return parseJsObjectExpr();
         case Increment:
             advance();
             return makeAst<IncrementExpression>(parseExpr(), 1);
@@ -210,7 +217,6 @@ Expr SigmaParser::parsePrimaryExpr() {
 };
 Expr SigmaParser::parseLambdaExpr() {
     const SigmaToken open_paren = advance();
-    std::cout << open_paren.symbol << " paren";
     std::vector<std::string> strs;
 
     while(itr->type != CloseParen){
@@ -233,7 +239,6 @@ Expr SigmaParser::parseFunctionCall(Expr expr) {
     const SigmaToken open_paren = advance();
     std::vector<Expr> exprs;
 
-    std::cout << itr->type << " incorrect itr type" << std::endl;
     while(itr->type != CloseParen){
         exprs.push_back(parseExpr());
         if(itr->type == Comma) advance();
@@ -305,7 +310,7 @@ Stmt SigmaParser::parseIfStmt() {
 
         else_if_stmts.push_back(makeAst<ElseIfStatement>(expr, statements));
     }
-    ElseStatement* else_stmt;
+    ElseStatement* else_stmt = nullptr;
 
     if(itr->type == Else){
         advance(); // through the else
@@ -335,9 +340,9 @@ Stmt SigmaParser::parseWhileLoop() {
 };
 Stmt SigmaParser::parseForLoop() {
     advance(); // eat for
-    Stmt first_stmt;
-    Expr expr;
-    Stmt last_stmt;
+    Stmt first_stmt = nullptr;
+    Expr expr = nullptr;
+    Stmt last_stmt = nullptr;
     if(itr->type != Comma){
         first_stmt = parseStmt();
         advance();
@@ -408,4 +413,23 @@ Stmt SigmaParser::parseCompoundAssignmentStmt(Expr targ_expr) {
     std::string op = advance().symbol;
     Expr val = parseExpr();
     return makeAst<CompoundAssignmentStatement>(targ_expr, op, val);
+};
+
+Expr SigmaParser::parseJsObjectExpr() {
+    advance(); // through the {
+
+    std::vector<std::pair<std::string, Expr>> exprs;
+
+    while(itr->type != CloseBrace){
+        std::string iden = advance().symbol;
+        advance(); // through the :
+        Expr expr = parseExpr();
+        exprs.push_back({iden, expr});
+        if(itr->type == Comma)
+            advance();
+        else break;
+    }
+    advance();
+
+    return makeAst<JsObjectExpression>(std::move(exprs));
 };

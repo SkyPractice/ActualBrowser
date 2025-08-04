@@ -13,7 +13,8 @@ enum SigmaAstType {
     MemberAccessExpressionType, PropertyDeclerationType, NameSpaceType, IdentifierExpressionType,
     FunctionCallExpressionType, ContinueStatementType, ReturnStatementType, BreakStatementType,
     MemberReInitExpressionType, IncrementExpressionType, DecrementExpressionType, 
-    CompoundAssignmentStatementType, NegativeExpressionType
+    CompoundAssignmentStatementType, NegativeExpressionType,
+    JsObjectExprType, CharExpressionType
 };
 
 class Statement {
@@ -51,6 +52,13 @@ public:
     std::string str;
 
     StringExpression(std::string stri): Expression(StringExpressionType), str(std::move(stri)) {};
+};
+
+class CharExpression : public Expression {
+public:
+    char character;
+
+    CharExpression(char ch): Expression(CharExpressionType), character(ch) {};
 };
 
 class IdentifierExpression : public Expression {
@@ -309,4 +317,12 @@ public:
 
     NegativeExpression(Expression* actual_expr): Expression(NegativeExpressionType),
         expr(actual_expr) {};
+};
+
+class JsObjectExpression : public Expression {
+public:
+    std::vector<std::pair<std::string, Expression*>> exprs;
+
+    JsObjectExpression(std::vector<std::pair<std::string,
+        Expression*>> expressions): Expression(JsObjectExprType), exprs(expressions) {};
 };

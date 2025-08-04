@@ -34,8 +34,7 @@ public:
             });
 
         }
-        collector_pool.join();
-        
+        collector_pool.join();        
     }
     static void unMark(std::vector<RunTimeVal*>& vals){
         if(vals.size() < 300){

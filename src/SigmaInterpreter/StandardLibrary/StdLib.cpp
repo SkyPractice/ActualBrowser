@@ -8,7 +8,7 @@ void StdLibInitializer::declareStdLibMemberInScope(std::string struct_name, RunT
     target_scope->declareVar(struct_name, { struct_val, true });
 };
 
-void StdLib::addValToStruct(StructVal* target_struct, std::string name,
+void StdLib::addValToStruct(ObjectVal* target_struct, std::string name,
     RunTimeVal* val) {
     target_struct->vals.insert({name, val});
 };

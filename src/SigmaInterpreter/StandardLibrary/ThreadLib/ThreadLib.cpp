@@ -8,10 +8,10 @@
 #include <unordered_map>
 
 
-StructVal* ThreadLib::getStruct(){
+ObjectVal* ThreadLib::getStruct(){
     std::unordered_map<std::string, RunTimeValue> vals = {
-        {"sleep", RunTimeFactory::makeNativeFunction(&ThreadLib::sleepCurrentThread)},
-        {"detach", RunTimeFactory::makeNativeFunction(&ThreadLib::detachLambda)}
+        {"sleep", RunTimeFactory::makeNativeFunction(&ThreadLib::sleepCurrentThread, {{"duration_millis", NumType}})},
+        {"detach", RunTimeFactory::makeNativeFunction(&ThreadLib::detachLambda, {{"target_lambda", LambdaType}})}
     };
 
     return RunTimeFactory::makeStruct(vals);
@@ -21,15 +21,13 @@ RunTimeValue ThreadLib::sleepCurrentThread(std::vector<RunTimeValue>& args, Sigm
     std::this_thread::sleep_for(std::chrono::milliseconds(duration));
     return nullptr;
 };
-RunTimeValue ThreadLib::detachLambda(std::vector<RunTimeValue>& args, SigmaInterpreter*) {
-    std::vector<RunTimeValue> actual_args = args;
-    std::shared_ptr<Scope> current_sc = StdLib::current_calling_scope;
-    boost::asio::post(Concurrency::pool, [args, current_sc]() mutable {
-        auto lambda_val = dynamic_cast<LambdaVal*>(args[0]);
-        SigmaInterpreter interpp;
-        interpp.current_scope = current_sc;
+RunTimeValue ThreadLib::detachLambda(std::vector<RunTimeValue>& args, SigmaInterpreter* interpreter) {
+    auto lambda_val = dynamic_cast<LambdaVal*>(args[0]);
+    interpreter->async_lambdas.insert({lambda_val->lambda_uuid, lambda_val});
+    boost::asio::post(Concurrency::pool, [args, interpreter, lambda_val]() mutable {
         std::vector<RunTimeValue> lambda_args(args.begin() + 1, args.end());
-        interpp.evaluateAnonymousLambdaCall(lambda_val, lambda_args);
+        interpreter->evaluateAnonymousLambdaCall(lambda_val, lambda_args);
+        interpreter->async_lambdas.erase(lambda_val->lambda_uuid);
     });
     return nullptr;
 };

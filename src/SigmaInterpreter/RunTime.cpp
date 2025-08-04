@@ -2,11 +2,14 @@
 #include <algorithm>
 #include <iomanip>
 #include <memory>
+#include <mutex>
 #include <sstream>
+#include <string>
 #include <unordered_map>
 
 std::vector<RunTimeVal*>* RunTimeFactory::target_alloc_vec = nullptr;
 std::pmr::synchronized_pool_resource RunTimeMemory::pool;
+std::mutex RunTimeMemory::pool_mut = std::mutex();
 
 NumVal* RunTimeFactory::makeNum(double num) {
     return makeVal<NumVal>(num);
@@ -14,12 +17,15 @@ NumVal* RunTimeFactory::makeNum(double num) {
 StringVal* RunTimeFactory::makeString(std::string str) {
     return makeVal<StringVal>(std::move(str));
 };
+CharVal* RunTimeFactory::makeChar(char ch) {
+    return makeVal<CharVal>(ch);
+};
 ArrayVal* RunTimeFactory::makeArray(std::vector<RunTimeVal*> vec){
     return makeVal<ArrayVal>(std::move(vec));
 };
-StructVal* RunTimeFactory::makeStruct(std::unordered_map<std::string,
+ObjectVal* RunTimeFactory::makeStruct(std::unordered_map<std::string,
     RunTimeVal*> vals) {
-    return makeVal<StructVal>(std::move(vals));
+    return makeVal<ObjectVal>(std::move(vals));
 };
 ReturnVal* RunTimeFactory::makeReturn(RunTimeVal* val) {
     return makeVal<ReturnVal>(std::move(val));
@@ -42,9 +48,9 @@ LambdaVal* RunTimeFactory::makeLambda(std::vector<std::string> params,
 };
 
 NativeFunctionVal* RunTimeFactory::makeNativeFunction(
-        NativeFunctionVal::FuncType func
+        NativeFunctionVal::FuncType func, std::vector<ArgInformation> arg_information
 ){
-    return makeVal<NativeFunctionVal>(std::move(func));
+    return makeVal<NativeFunctionVal>(std::move(func), std::move(arg_information));
 };
 
 RefrenceVal* RunTimeFactory::makeRefrence(RunTimeVal** val){
@@ -64,7 +70,7 @@ RunTimeVal* ArrayVal::clone() {
         return val->clone();
     });
     return RunTimeFactory::makeArray(new_arr); };
-RunTimeVal* StructVal::clone() { 
+RunTimeVal* ObjectVal::clone() { 
     std::unordered_map<std::string, RunTimeVal*> valss;
     for(auto& [val_name, value] : vals){
         valss.insert({val_name, value->clone() });
@@ -98,3 +104,20 @@ std::string BinaryVal::getString(){
 HtmlElementVal* RunTimeFactory::makeHtmlElement(HTMLTag* tag) {
     return makeVal<HtmlElementVal>(tag);
 };
+
+// Json Serialization
+std::string ObjectVal::getString() {
+    if(vals.contains("is_primitive")){
+        return vals["primitive"]->getString();
+    }
+    std::ostringstream result_stream;
+    result_stream << "{ ";
+    for(auto& [name, val] : vals){
+        result_stream << "\"" << name << "\"" << " : " << val->getString() << ", ";
+    }
+    std::string result_str = result_stream.str();
+    if(result_str != "{")
+        result_str.erase(result_str.size() - 2,1);
+    result_str += "}";
+    return result_str;
+}

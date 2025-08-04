@@ -3,7 +3,7 @@
 
 class GCLib {
 public:
-    static StructVal* getStruct();
+    static ObjectVal* getStruct();
 
     static RunTimeVal* mark(COMPILED_FUNC_ARGS);
     static RunTimeVal* sweep(COMPILED_FUNC_ARGS);

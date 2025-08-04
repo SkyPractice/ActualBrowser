@@ -1,4 +1,6 @@
 #pragma once
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -14,13 +16,22 @@
 
 class SigmaInterpreter;
 
+
 enum RunTimeValType {
     NumType, StringType, CharType, BoolType, LambdaType, ArrayType, StructType, ReturnType,
-    BreakType, ContinueType, NativeFunctionType, RefrenceType, BinaryType, HtmlType
+    BreakType, ContinueType, NativeFunctionType, RefrenceType, BinaryType, HtmlType, AnyType
+};
+
+
+struct ArgInformation {
+    std::string arg_name;
+    RunTimeValType type;
+    bool optional = false;
 };
 
 class RunTimeVal {
 public:
+    bool invincible = false;
     bool marked = false;
     bool is_l_val = false;
     RunTimeValType type;
@@ -124,12 +135,17 @@ public:
     std::vector<std::string> params;
     std::vector<Statement*> stmts;
     std::unordered_map<std::string, RunTimeVal*> captured;
+    std::string lambda_uuid;
 
     LambdaVal(std::vector<std::string> parameters,
         std::vector<Statement*> statements,
         std::unordered_map<std::string, RunTimeVal*> captured_vals):
         RunTimeVal(LambdaType), params(std::move(parameters)), stmts(std::move(statements)),
-        captured(captured_vals) {}; 
+        captured(captured_vals) {
+        boost::uuids::random_generator gen;
+        boost::uuids::uuid uuid = gen();
+        lambda_uuid = boost::uuids::to_string(uuid);
+    }; 
 
     void cleanUpChildren(std::pmr::synchronized_pool_resource& target_pool) override {
         for(auto& [name, val] : captured){
@@ -173,10 +189,15 @@ public:
         RunTimeVal(ArrayType), vals(std::move(values)) {};
     std::string getString() override {
         std::string str = "[ ";
-        for(auto val : vals){
-            std::string strr = val->getString();
+        for(auto val = vals.begin(); val != vals.end(); val++){
+            std::string strr = (*val)->getString();
             str += strr;
-            str += ", ";
+            if(val != vals.end()){
+                str += ", ";
+            }
+        }
+        if(str != "[ "){
+            str.erase(str.size() - 2, 1);
         }
         str += "]";
         return str;
@@ -204,18 +225,16 @@ public:
     
 };
 
-class StructVal : public RunTimeVal {
+class ObjectVal : public RunTimeVal {
 public:
     std::unordered_map<std::string, RunTimeVal*> vals;
 
-    StructVal(std::unordered_map<std::string, RunTimeVal*> values):
+    ObjectVal(std::unordered_map<std::string, RunTimeVal*> values):
         RunTimeVal(StructType), vals(std::move(values)) {};
-    std::string getString() override {
-        return "<struct>";
-    }
+    std::string getString() override;
 
-    size_t getSize() override { return sizeof(StructVal); };
-    size_t getAlignment() override { return alignof(StructVal); };
+    size_t getSize() override { return sizeof(ObjectVal); };
+    size_t getAlignment() override { return alignof(ObjectVal); };
 
     void markChildren() override { 
         for(auto& [name, val] : vals){
@@ -229,7 +248,7 @@ public:
     };
 
     void setValue(RunTimeVal* val) override {
-        vals = dynamic_cast<StructVal*>(val)->vals;
+        vals = dynamic_cast<ObjectVal*>(val)->vals;
     }
 
     RunTimeVal* clone() override;
@@ -275,11 +294,26 @@ class NativeFunctionVal : public RunTimeVal {
 public:
     using FuncType = std::function<RunTimeVal*(std::vector<RunTimeVal*>&, SigmaInterpreter*)>;    
     FuncType func;
+    std::vector<ArgInformation> arg_types;
 
-    NativeFunctionVal(FuncType functio): RunTimeVal(NativeFunctionType), func(std::move(functio)) {};
+    NativeFunctionVal(FuncType functio,
+        std::vector<ArgInformation> arg_types_arg): RunTimeVal(NativeFunctionType),
+        func(std::move(functio)), arg_types(arg_types_arg) {};
 
     size_t getSize() override { return sizeof(NativeFunctionVal); };
     size_t getAlignment() override { return alignof(NativeFunctionVal); };
+    size_t calculateMinimumArgNumber(){
+        size_t result = 0;
+        for(auto& arg_type : arg_types){
+            if(!arg_type.optional){
+                result++;
+            }
+        }
+        return result;
+    }
+    size_t calculateMaximumArgNumber(){
+        return arg_types.size();
+    }
 
     RunTimeVal* clone() override;
 };
@@ -327,6 +361,7 @@ public:
 class RunTimeMemory {
 public:
     static std::pmr::synchronized_pool_resource pool;
+    static std::mutex pool_mut;
 };
 
 class RunTimeFactory {
@@ -334,6 +369,7 @@ public:
     static std::vector<RunTimeVal*>* target_alloc_vec;
     template<typename ValType, typename ...ArgsType>
     static ValType* makeVal(ArgsType... args) {
+        std::lock_guard<std::mutex> lock(RunTimeMemory::pool_mut);
         void* mem = RunTimeMemory::pool.allocate(sizeof(ValType), alignof(ValType));
         ValType* obj = new(mem)ValType(std::forward<ArgsType>(args)...);
         target_alloc_vec->push_back(obj);
@@ -341,13 +377,15 @@ public:
     };
     template<typename ValType>
     static void freeVal(ValType** ptr){
+        std::lock_guard<std::mutex> lock(RunTimeMemory::pool_mut);
         RunTimeMemory::pool.deallocate(*ptr, sizeof(ValType), alignof(ValType));
         *ptr = nullptr;
     }
     static NumVal* makeNum(double num);
     static StringVal* makeString(std::string str);
+    static CharVal* makeChar(char ch);
     static ArrayVal* makeArray(std::vector<RunTimeVal*> vec);
-    static StructVal* makeStruct(std::unordered_map<std::string,
+    static ObjectVal* makeStruct(std::unordered_map<std::string,
          RunTimeVal*> vals);
     static ReturnVal* makeReturn(RunTimeVal* val);
     static BreakVal* makeBreak();
@@ -357,7 +395,7 @@ public:
         std::vector<Statement*> stmts, std::unordered_map<std::string, 
         RunTimeVal*> captured);
     static NativeFunctionVal* makeNativeFunction(
-        NativeFunctionVal::FuncType func
+        NativeFunctionVal::FuncType func, std::vector<ArgInformation> arg_information
     );
     static RefrenceVal* makeRefrence(
         RunTimeVal** val

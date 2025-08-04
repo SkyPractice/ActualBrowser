@@ -180,9 +180,6 @@ std::unordered_map<std::string, std::string> Parser::parseProps(){
         if(itr->type == PROPVAL) { val = advance().symbol; };
         map.insert({name, val});
     }
-    for(auto& prop : map){
-        std::cout << prop.first << "=" << prop.second << '\n';
-    }
 
     return map;
 
@@ -202,7 +199,7 @@ Tag Parser::parseButtonTag(){
     tag->props = parseProps();
     while(itr->type != CLOSEBUTTON){
         const auto html_tag = parseHtmlTag();
-        if(html_tag->type == String){
+        if(html_tag->tag_information.type == String){
             tag->str += std::dynamic_pointer_cast<StringTag>(html_tag)->str;
         };
     }

@@ -4,9 +4,9 @@
 
 RunTimeVal* MathLib::getStruct(){
     std::unordered_map<std::string, RunTimeVal*> func_map = {
-        {"sqrt", RunTimeFactory::makeNativeFunction(&MathLib::mathSqrt)},
-        {"pow", RunTimeFactory::makeNativeFunction(&MathLib::mathPow)},
-        {"rand", RunTimeFactory::makeNativeFunction(&MathLib::mathRand)},
+        {"sqrt", RunTimeFactory::makeNativeFunction(&MathLib::mathSqrt, {{"number", NumType}})},
+        {"pow", RunTimeFactory::makeNativeFunction(&MathLib::mathPow, {{"number", NumType}, {"exponent", NumType}})},
+        {"rand", RunTimeFactory::makeNativeFunction(&MathLib::mathRand, {})},
         {"PI", RunTimeFactory::makeNum(M_PI)}
     };
 

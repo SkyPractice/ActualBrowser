@@ -1,15 +1,15 @@
 #include "ArrayLib.h"
 #include "../../SigmaInterpreter.h"
 
-StructVal* ArrayLib::getStruct() {
+ObjectVal* ArrayLib::getStruct() {
     std::unordered_map<std::string, RunTimeVal*> vals = {
-        {"resizeArray", RunTimeFactory::makeNativeFunction(&ArrayLib::resizeArray)},
-        {"pushBackArray", RunTimeFactory::makeNativeFunction(&ArrayLib::pushBackArray)},
-        {"popBackArray", RunTimeFactory::makeNativeFunction(&ArrayLib::popBackArray)},
-        {"pushFirstArray", RunTimeFactory::makeNativeFunction(&ArrayLib::pushFirstArray)},
-        {"popFirstArray", RunTimeFactory::makeNativeFunction(&ArrayLib::popFirstArray)},
-        {"insertIntoArray", RunTimeFactory::makeNativeFunction(&ArrayLib::insertIntoArray)},
-        {"getArraySize", RunTimeFactory::makeNativeFunction(&ArrayLib::arraySize)}
+        {"resize", RunTimeFactory::makeNativeFunction(&ArrayLib::resizeArray, { {"array", ArrayType, false}, {"new_size", NumType, false}})},
+        {"pushBack", RunTimeFactory::makeNativeFunction(&ArrayLib::pushBackArray, {{ "array", ArrayType, false }, { "element", AnyType, false }})},
+        {"popBack", RunTimeFactory::makeNativeFunction(&ArrayLib::popBackArray, { { "array", ArrayType, false } })},
+        {"pushFirst", RunTimeFactory::makeNativeFunction(&ArrayLib::pushFirstArray, { { "array", ArrayType, false }, { "element", AnyType, false} })},
+        {"popFirst", RunTimeFactory::makeNativeFunction(&ArrayLib::popFirstArray, { { "array", ArrayType, false} })},
+        {"insertInto", RunTimeFactory::makeNativeFunction(&ArrayLib::insertIntoArray, { { "array", ArrayType, false }, { "index", NumType, false }, { "element", AnyType, false }})},
+        {"getSize", RunTimeFactory::makeNativeFunction(&ArrayLib::arraySize, { { "array", ArrayType, false } })}
     };
 
     return RunTimeFactory::makeStruct(std::move(vals));
