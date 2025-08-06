@@ -3,6 +3,7 @@
 #include "../../Concurrency/ThreadPool.h"
 #include "../../HttpManager/HttpManager.h"
 #include <boost/asio/post.hpp>
+#include <iostream>
 
 void HTMLTagRenderer::render(HTMLTag* target_tag, Gtk::Box* target_box) {
     target_tag->tag_information.parent_widget = target_box;
@@ -74,6 +75,19 @@ void ButtonTagRenderer::render(HTMLTag* target_tag, Gtk::Box* target_box) {
     casted_tag->tag_information.current_widget = casted_tag->button;
 
     target_box->append(*casted_tag->button);
+    
+    css_manager->applyCssClasses(casted_tag);
+    css_manager->applyStyle(casted_tag);
+};
+void VideoTagRenderer::render(HTMLTag* target_tag, Gtk::Box* target_box) {
+    VideoTag* casted_tag = static_cast<VideoTag*>(target_tag);
+    casted_tag->vid = Gtk::manage(new Gtk::Video(casted_tag->props["src"]));
+    std::cout << casted_tag->props["src"];
+
+    casted_tag->tag_information.parent_widget = target_box;
+    casted_tag->tag_information.current_widget = casted_tag->vid;
+
+    target_box->append(*casted_tag->vid);
     
     css_manager->applyCssClasses(casted_tag);
     css_manager->applyStyle(casted_tag);

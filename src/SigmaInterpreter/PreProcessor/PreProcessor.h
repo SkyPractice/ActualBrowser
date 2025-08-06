@@ -72,8 +72,11 @@ public:
                     int ending_index = current_index;
 
                     current_index = starting_index;
+                    if(!code_dir.empty())
                     code.replace(starting_index, ending_index - starting_index,
-                        readFile(code_dir + file_name));
+                        readFile(code_dir + "/" + file_name));
+                    else code.replace(starting_index, ending_index - starting_index,
+                        readFile(file_name));
 
                 }
             } else advance();

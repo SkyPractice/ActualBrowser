@@ -22,6 +22,7 @@ public:
     Tag parseDivTag();
     Tag parseStyleTag();
     Tag parseScriptTag();
+    Tag parseVideoTag();
     template<typename ContainerType, TokenType CloseTokenType>
     Tag parseContainerTag(){
         const Token html_tok = advance();

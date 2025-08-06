@@ -50,6 +50,8 @@ std::shared_ptr<HTMLTag> Parser::parseHtmlTag() {
     return parseStyleTag();
   case OPENSCRIPT:
     return parseScriptTag();
+  case VIDEO:
+    return parseVideoTag();
   default:
     throw std::runtime_error(("Unknown Token " + itr->symbol).c_str());
   }
@@ -74,6 +76,14 @@ Tag Parser::parseImageTag(){
     advance();
     return tag;
 };
+Tag Parser::parseVideoTag(){
+    const Token html_tok = advance();
+    const auto tag = std::make_shared<VideoTag>();
+    tag->props = parseProps();
+    
+    advance();
+    return tag;
+}
 Tag Parser::parseBodyTag(){
     const Token html_tok = advance();
     const auto tag = std::make_shared<BodyTag>();

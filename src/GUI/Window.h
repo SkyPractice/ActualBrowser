@@ -1,4 +1,6 @@
 #pragma once
+#include <boost/system/system_error.hpp>
+#include <boost/throw_exception.hpp>
 #include <filesystem>
 #include <gdk/gdk.h>
 #include <gdk/gdkkeysyms.h>
@@ -20,6 +22,7 @@
 #include "../Interpreter/Parser.h"
 #include "../Interpreter/Interpreter.h"
 #include <gtkmm/scrolledwindow.h>
+#include <ostream>
 #include <sigc++/functors/mem_fun.h>
 #include <gtkmm/messagedialog.h>
 #include <stdexcept>
@@ -88,11 +91,15 @@ public:
             if(keyval == GDK_KEY_Return && url_input->get_text_length() > 0){
 
                 if(has_net){
-                    std::string html_content = http_manager->getRequest(url_input->get_text());
-                    auto tokens = lexer.tokenize(html_content);
-                    auto program = parser.produceAst(tokens);
-                    interpreter.target_window = this;
-                    interpreter.renderTags(actual_box_member, program, url_input->get_text());
+                    try{
+                        std::string html_content = http_manager->getRequest(url_input->get_text());
+                        auto tokens = lexer.tokenize(html_content);
+                        auto program = parser.produceAst(tokens);
+                        interpreter.target_window = this;
+                        interpreter.renderTags(actual_box_member, program, url_input->get_text());
+                    } catch(boost::wrapexcept<boost::system::system_error>& exception) {
+                        std::cout << exception.what() << std::endl;
+                    }
                 } else {
                     std::string url = url_input->get_text();
                     std::string html_text;

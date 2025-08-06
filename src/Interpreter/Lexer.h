@@ -13,7 +13,8 @@ enum TokenType {
     CLOSEBODY, EndOfFile, PROPNAME, PROPVAL, IMAGE, CLOSEIMAGE,
     BUTTON, CLOSEBUTTON, INPUT, CLOSEINPUT, DIV, CLOSEDIV, OPENSTYLE, CLOSESTYLE,
     OPENSCRIPT, CLOSESCRIPT, SPAN, HEADER, NAV, FOOTER, MAIN, ARTICLE, ASIDE, SECTION,
-    CLOSESPAN, CLOSEHEADER, CLOSENAV, CLOSEFOOTER, CLOSEMAIN, CLOSEARTICLE, CLOSEASIDE, CLOSESECTION
+    CLOSESPAN, CLOSEHEADER, CLOSENAV, CLOSEFOOTER, CLOSEMAIN, CLOSEARTICLE, CLOSEASIDE, CLOSESECTION,
+    VIDEO, CLOSEVIDEO
 };
 
 struct Token {
@@ -40,7 +41,8 @@ public:
         {"<main>", MAIN},{"<article>", ARTICLE}, {"<aside>", ASIDE},
         {"<section>", SECTION}, {"</span>", CLOSESPAN}, {"</nav>", CLOSENAV},
          {"</header>", CLOSEHEADER}, {"</footer>", CLOSEFOOTER}, {"</main>", CLOSEMAIN},
-         {"</article>", CLOSEARTICLE}, {"</aside>", CLOSEASIDE}, {"</section>", CLOSESECTION}
+         {"</article>", CLOSEARTICLE}, {"</aside>", CLOSEASIDE}, {"</section>", CLOSESECTION},
+         {"<video>", VIDEO}, {"</video>", CLOSEVIDEO}
     };
     std::unordered_set<char> skip_chars = {
         ' ', '\t', '\r', '\n'

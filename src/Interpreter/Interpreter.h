@@ -97,6 +97,11 @@ public:
         for(auto& tag : flattened_tags){
             if(tag->tag_information.type == Stylee){
                 auto style_tag = std::dynamic_pointer_cast<StyleTag>(tag);
+                size_t index = document_or_host.rfind('/');
+                if(index != std::string::npos){
+                    std::string new_src = document_or_host.substr(0, index) + "/" + style_tag->src;
+                    style_tag->src = std::move(new_src);
+                }
                 if(fs::exists(style_tag->src)){
                     auto provider = Gtk::CssProvider::create();
                     provider->load_from_path(style_tag->src);
@@ -106,6 +111,13 @@ public:
                 }
             } else if (tag->tag_information.type == Scriptt){
                 auto script_tag = std::dynamic_pointer_cast<ScriptTag>(tag);
+                
+                size_t index = document_or_host.rfind('/');
+                if(index != std::string::npos){
+                    std::string new_src = document_or_host.substr(0, index) + "/" + script_tag->src;
+                    script_tag->src = std::move(new_src);
+                }
+                
                 if(fs::exists(script_tag->src)){
                     std::ifstream file_stream(script_tag->src, std::ios::ate);
                     std::string code;

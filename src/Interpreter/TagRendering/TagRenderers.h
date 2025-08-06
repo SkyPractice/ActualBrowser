@@ -73,3 +73,11 @@ public:
 
     void render(HTMLTag* target_tag, Gtk::Box* target_box) override;
 };
+
+class VideoTagRenderer : public HTMLTagRenderer {
+public:
+    VideoTagRenderer(): HTMLTagRenderer(
+        std::make_unique<VideoTagCssManager>()) {};
+
+    void render(HTMLTag* target_tag, Gtk::Box* target_box);
+};

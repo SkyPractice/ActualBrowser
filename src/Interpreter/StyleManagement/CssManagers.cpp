@@ -143,3 +143,13 @@ void ImageTagCssManager::applyCssClasses(HTMLTag* target_tag){
     ImageTag* casted_tag = static_cast<ImageTag*>(target_tag);
     applyCssClassesUtil(target_tag, casted_tag->image);
 };
+
+void VideoTagCssManager::applyStyle(HTMLTag* target_tag){
+    VideoTag* casted_tag = static_cast<VideoTag*>(target_tag);
+    applyStyleUtil(target_tag, casted_tag->vid);
+};
+
+void VideoTagCssManager::applyCssClasses(HTMLTag* target_tag){
+    VideoTag* casted_tag = static_cast<VideoTag*>(target_tag);
+    applyCssClassesUtil(target_tag, casted_tag->vid);
+};

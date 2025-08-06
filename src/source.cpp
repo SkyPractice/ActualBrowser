@@ -35,7 +35,8 @@ int main(int argc, char** argv){
         auto app = Gtk::Application::create("org.gtkmm.example");
 
         return app->make_window_and_run<BrowserWindow>(argc, argv, &man);
-    } catch(boost::wrapexcept<boost::system::system_error>){
+    } catch(boost::wrapexcept<boost::system::system_error>& exception){
+        std::cout << exception.what() << std::endl; 
         std::cout << "internet is off probably, running in no internet mode . . . " << std::endl;
         auto app = Gtk::Application::create("org.gtkmm.example");
         return app->make_window_and_run<BrowserWindow>(argc, argv, nullptr);

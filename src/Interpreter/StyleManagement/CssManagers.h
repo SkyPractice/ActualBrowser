@@ -39,6 +39,11 @@ public:
      void applyCssClasses(HTMLTag* target_tag) override;
      void applyStyle(HTMLTag* target_tag) override;
 };
+class VideoTagCssManager : public BasicTagCssManagerUtil {
+public:
+     void applyCssClasses(HTMLTag* target_tag) override;
+     void applyStyle(HTMLTag* target_tag) override;
+};
 class ButtonTagCssManager : public BasicTagCssManagerUtil {
 public:
      void applyCssClasses(HTMLTag* target_tag) override;

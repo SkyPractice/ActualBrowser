@@ -9,6 +9,7 @@
 #include <gtkmm/enums.h>
 #include <gtkmm/image.h>
 #include <gtkmm/object.h>
+#include <gtkmm/video.h>
 #include <gtkmm/widget.h>
 #include <memory>
 #include <string>
@@ -26,7 +27,7 @@ class LambdaVal;
 
 enum TagType {
     Html, Body, Head, h1, h2, h3, h4, h5, p, String, Image, Input, Button, Div, Stylee, Scriptt,
-    Span, Header, Nav, Footer, Main, Article, Section, Aside
+    Span, Header, Nav, Footer, Main, Article, Section, Aside, Video
 };
 
 struct TagInformation {
@@ -300,4 +301,12 @@ class ScriptTag : public HTMLTag {
 public:
     ScriptTag(): HTMLTag(Scriptt, "script", "") {};
     std::string src;
+};
+
+class VideoTag : public HTMLTag {
+public:
+    std::string src;
+    Gtk::Video* vid;
+    VideoTag(): HTMLTag(Video, "video", "video", 
+        std::make_unique<VideoTagRenderer>()) {};
 };
