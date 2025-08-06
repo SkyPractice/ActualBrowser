@@ -87,10 +87,10 @@ RunTimeValue FilesLib::readFileAsync(COMPILED_FUNC_ARGS) {
     std::vector<RunTimeValue> actual_args = args;
     auto lambda_val = static_cast<LambdaVal*>(args[1]);
 
-    interpreter->async_lambdas.insert({lambda_val->lambda_uuid, lambda_val});
+    interpreter->garbageCollectionRestricter.registerAsyncLambda(lambda_val);
     boost::asio::post(Concurrency::pool, [args, interpreter, lambda_val]() mutable {
         interpreter->evaluateAnonymousLambdaCall(lambda_val, {FilesLib::readFileSync(args, interpreter)});
-        interpreter->async_lambdas.erase(lambda_val->lambda_uuid);
+        interpreter->garbageCollectionRestricter.unRegisterAsyncLambda(lambda_val->lambda_uuid);
     });
     return nullptr;
 };
@@ -98,30 +98,30 @@ RunTimeValue FilesLib::writeFileAsync(COMPILED_FUNC_ARGS) {
     std::vector<RunTimeValue> actual_args = args;
     auto lambda_val = static_cast<LambdaVal*>(args[2]);
 
-    interpreter->async_lambdas.insert({lambda_val->lambda_uuid, lambda_val});
+    interpreter->garbageCollectionRestricter.registerAsyncLambda(lambda_val);
     boost::asio::post(Concurrency::pool, [args, interpreter, lambda_val]() mutable {
         interpreter->evaluateAnonymousLambdaCall(lambda_val, {FilesLib::writeFileSync(args, interpreter)});
-        interpreter->async_lambdas.erase(lambda_val->lambda_uuid);
+        interpreter->garbageCollectionRestricter.unRegisterAsyncLambda(lambda_val->lambda_uuid);
     });
     return nullptr;
 };
 RunTimeValue FilesLib::writeBinaryFileAsync(COMPILED_FUNC_ARGS) {
     auto lambda_val = static_cast<LambdaVal*>(args[2]);
     
-    interpreter->async_lambdas.insert({lambda_val->lambda_uuid, lambda_val});
+    interpreter->garbageCollectionRestricter.registerAsyncLambda(lambda_val);
     boost::asio::post(Concurrency::pool, [args, interpreter, lambda_val]() mutable {
         interpreter->evaluateAnonymousLambdaCall(lambda_val, {FilesLib::writeBinaryFileSync(args, interpreter)});
-        interpreter->async_lambdas.erase(lambda_val->lambda_uuid);
+        interpreter->garbageCollectionRestricter.unRegisterAsyncLambda(lambda_val->lambda_uuid);
     });
     return nullptr;
 };
 RunTimeValue FilesLib::readBinaryFileAsync(COMPILED_FUNC_ARGS) {
     auto lambda_val = static_cast<LambdaVal*>(args[1]);
 
-    interpreter->async_lambdas.insert({lambda_val->lambda_uuid, lambda_val});
+    interpreter->garbageCollectionRestricter.registerAsyncLambda(lambda_val);
     boost::asio::post(Concurrency::pool, [args, interpreter, lambda_val]() mutable {
         interpreter->evaluateAnonymousLambdaCall(lambda_val, {FilesLib::readBinaryFileSync(args, interpreter)});
-        interpreter->async_lambdas.erase(lambda_val->lambda_uuid);
+        interpreter->garbageCollectionRestricter.unRegisterAsyncLambda(lambda_val->lambda_uuid);
     });
     return nullptr;
 };

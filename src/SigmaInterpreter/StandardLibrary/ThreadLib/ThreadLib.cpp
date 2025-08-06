@@ -23,11 +23,11 @@ RunTimeValue ThreadLib::sleepCurrentThread(std::vector<RunTimeValue>& args, Sigm
 };
 RunTimeValue ThreadLib::detachLambda(std::vector<RunTimeValue>& args, SigmaInterpreter* interpreter) {
     auto lambda_val = dynamic_cast<LambdaVal*>(args[0]);
-    interpreter->async_lambdas.insert({lambda_val->lambda_uuid, lambda_val});
+    interpreter->garbageCollectionRestricter.registerAsyncLambda(lambda_val);
     boost::asio::post(Concurrency::pool, [args, interpreter, lambda_val]() mutable {
         std::vector<RunTimeValue> lambda_args(args.begin() + 1, args.end());
         interpreter->evaluateAnonymousLambdaCall(lambda_val, lambda_args);
-        interpreter->async_lambdas.erase(lambda_val->lambda_uuid);
+        interpreter->garbageCollectionRestricter.unRegisterAsyncLambda(lambda_val->lambda_uuid);
     });
     return nullptr;
 };

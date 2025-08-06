@@ -31,7 +31,7 @@ RunTimeVal* PermissionLib::isPermissionGranted(COMPILED_FUNC_ARGS) {
 RunTimeVal* PermissionLib::requestPermission(COMPILED_FUNC_ARGS) {
     std::string perm = static_cast<StringVal*>(args[0])->str;
     LambdaVal* lambda = static_cast<LambdaVal*>(args[1]);
-    interpreter->async_lambdas.insert({ lambda->lambda_uuid, lambda });
+    interpreter->garbageCollectionRestricter.registerAsyncLambda(lambda);
 
     WindowLib::showAlert({"Permission Request: ",
         "The Site Is Requesting " + perm + "Permissions", 
@@ -43,12 +43,12 @@ RunTimeVal* PermissionLib::requestPermission(COMPILED_FUNC_ARGS) {
                     PermissionFileController::writePermsToFile("./Config/Permissions/" + interpreter->doc_name
                         , interpreter->perms);
                     interpreter->evaluateAnonymousLambdaCall(lambda, {RunTimeFactory::makeBool(true)});
-                    interpreter->async_lambdas.erase(lambda->lambda_uuid);
+                    interpreter->garbageCollectionRestricter.unRegisterAsyncLambda(lambda->lambda_uuid);
                 }}, {"Deny", [interpreter, lambda, perm](Gtk::Dialog* dialog)
                 {
                     dialog->close();
                     interpreter->evaluateAnonymousLambdaCall(lambda, {RunTimeFactory::makeBool(false)});
-                    interpreter->async_lambdas.erase(lambda->lambda_uuid);
+                    interpreter->garbageCollectionRestricter.unRegisterAsyncLambda(lambda->lambda_uuid);
                 }}}});
 
     return nullptr;

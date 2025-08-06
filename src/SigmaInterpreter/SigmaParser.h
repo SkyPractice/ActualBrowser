@@ -35,6 +35,7 @@ public:
     Stmt parseIndexReInitStmt(Expr arr);
     Stmt parseMemberReInitStmt(Expr stru);
     Stmt parseCompoundAssignmentStmt(Expr targ_expr);
+    Stmt parseFunctionDecl();
 
     Expr parseExpr();
     Expr parseAddExpr();

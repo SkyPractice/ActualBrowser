@@ -165,8 +165,9 @@ public:
                 prov);
         }
         css_providers.clear();
-        scripting_interpreter.registered_event_handlers.clear();
-        GarbageCollector::sweep(RunTimeMemory::pool);
+
+        GarbageCollector::alive_vals.clear();
+        RunTimeMemory::pool.release();
         SigmaParser::memory_pool.release();
     }
 

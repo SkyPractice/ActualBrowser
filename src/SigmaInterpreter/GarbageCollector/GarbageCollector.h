@@ -3,10 +3,12 @@
 #include <boost/asio/post.hpp>
 #include <memory_resource>
 #include <boost/asio/thread_pool.hpp>
+#include <ostream>
 #include <unordered_map>
+#include <iostream>
 #include <vector>
 
-#define UNCHECKED_ALLOC_MAX 100000
+#define UNCHECKED_ALLOC_MAX 1000000
 
 class GarbageCollector {
 public:
@@ -14,6 +16,9 @@ public:
     static std::vector<RunTimeVal*> alive_vals;
     static int unchecked_allocs_count;
 
+    static bool massiveGCShouldRun(){
+        return alive_vals.size() >= UNCHECKED_ALLOC_MAX;
+    }
     static void alloc_val(RunTimeVal* val){
         alive_vals.push_back(val);
     }
@@ -57,6 +62,7 @@ public:
     }
 
     static void sweep(std::pmr::synchronized_pool_resource& mem_pool){
+        std::cout << "sweeping" << std::endl;
         for(auto itr = alive_vals.begin(); itr != alive_vals.end(); itr++){
             if(!(*itr)->marked && (*itr) != nullptr) {
                 RunTimeVal::deallocateVal(mem_pool, &(*itr));

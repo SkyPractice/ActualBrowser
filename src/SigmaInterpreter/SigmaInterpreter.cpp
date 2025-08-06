@@ -37,6 +37,8 @@ std::unordered_set<RunTimeValType> SigmaInterpreter::non_copyable_types = {
 };
 
 void SigmaInterpreter::initialize(){
+    garbageCollectionRestricter.reset();
+
     current_scope = std::make_shared<Scope>(nullptr);
     struct_decls.clear();
     
@@ -69,19 +71,17 @@ void SigmaInterpreter::initialize(){
     current_scope->declareVar("Object", { RunTimeFactory::makeStruct((obj_vals)), true });
 
     Util::SigmaInterpreterHelper::initializeStandardLibraries(current_scope);
+
     ArrayWrapper::initializeWrapper();
     StringWrapper::initializeWrapper();
 
-    wrapper_types_cache = {};
-
-    for(auto& v : ArrayWrapper::funcs){
-        wrapper_types_cache.push_back(v.second);
-    }
-
-    for(auto& v : StringWrapper::funcs){
-        wrapper_types_cache.push_back(v.second);
-    }
+    garbageCollectionRestricter.registerWrapperTypeFunctions(ArrayWrapper::funcs);
+    garbageCollectionRestricter.registerWrapperTypeFunctions(StringWrapper::funcs);
 }
+
+void SigmaInterpreter::cleanUpBeforeExecuting() {
+    
+};
 
 RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
     switch (stmt->type) {
@@ -153,6 +153,8 @@ RunTimeValue SigmaInterpreter::evaluate(Stmt stmt) {
             return evaluateIncrementExpression(static_cast<IncrementExpression*>(stmt));
         case NegativeExpressionType:
             return evaluateNegativeExpression(static_cast<NegativeExpression*>(stmt));
+        case NullExpressionType:
+            return RunTimeFactory::makeVal<NullVal>();
         default: throw std::runtime_error("Not Implemented " + std::to_string(stmt->type));
     }
 };
@@ -202,6 +204,7 @@ RunTimeValue SigmaInterpreter::evaluateWhileLoopStatement(WhileLoopStatement* wh
         current_scope->variables.clear();
     }
     current_scope = current_scope->parent;
+    garbageCollectIfNeeded();
     return nullptr;
 };
 RunTimeValue SigmaInterpreter::evaluateForLoopStatement(ForLoopStatement* for_loop) {
@@ -239,6 +242,8 @@ RunTimeValue SigmaInterpreter::evaluateForLoopStatement(ForLoopStatement* for_lo
 
     current_scope = current_scope->parent;
     current_scope = current_scope->parent;
+
+    garbageCollectIfNeeded();
 
     return nullptr;
 };
@@ -281,12 +286,31 @@ RunTimeValue SigmaInterpreter::evaluateBinaryExpression(BinaryExpression* expr) 
 
         return evaluateBooleanBinaryExpression(l, r, expr->op);
     }
+    if(left->type == NullType && right->type == NullType){
+        auto l = static_cast<NullVal*>(left);
+        auto r = static_cast<NullVal*>(right);
 
+        if(expr->op == "==")
+            return RunTimeFactory::makeBool(true);
+        else if (expr-> op == "!=")
+            return RunTimeFactory::makeBool(false);
+    }
+    if((left->type == NullType && right->type != NullType) || 
+        (right->type == NullType && left->type != NullType)){
+        if(expr->op == "==")
+            return RunTimeFactory::makeBool(false);
+        else if(expr->op == "!=")
+            return RunTimeFactory::makeBool(true);
+    }
     throw std::runtime_error("Binary Operators Not Implemented For Operands " + 
         type_to_string_table.at(left->type) + "," + type_to_string_table.at(right->type));
 };
 
 RunTimeValue SigmaInterpreter::evaluateVariableDeclStatement(VariableDecleration* decl) {
+    if(decl->expr == nullptr){
+        current_scope->declareVar(decl->var_name, {RunTimeFactory::makeVal<NullVal>()});
+        return nullptr;
+    }
     auto val = evaluate(decl->expr);
     if(!shouldICopy(val)){
         current_scope->declareVar(decl->var_name, { val,
@@ -325,14 +349,14 @@ RunTimeValue SigmaInterpreter::evaluateVariableReInitStatement(VariableReInit* d
                 if(this_struct->vals[decl->var_name]->type == RefrenceType){
                     auto actual_ref = static_cast<RefrenceVal*>(this_struct->vals[decl->var_name]);
                     *actual_ref->val = new_value;
-                    return nullptr;
+                    return RunTimeFactory::makeVal<NullVal>();
                 }
                 if(shouldICopy(new_value))
                     this_struct->vals[decl->var_name]->setValue(new_value);
                 else {
                     this_struct->vals[decl->var_name] = new_value;
                 }
-                return nullptr;
+                return RunTimeFactory::makeVal<NullVal>();
             }
         }
     }
@@ -375,9 +399,8 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(FunctionCallExpres
 
     if(func->type == NativeFunctionType){
         auto new_scope = std::make_shared<Scope>(current_scope);
-        auto last_sc = current_scope;
         current_scope = new_scope;
-        
+
         if(expr->func_expr->type == MemberAccessExpressionType){
             MemberAccessExpression* mem_expr = static_cast<MemberAccessExpression*>(
                 expr->func_expr)->clone_expr();
@@ -392,8 +415,19 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(FunctionCallExpres
         NativeFunctionVal* func_val = static_cast<NativeFunctionVal*>(func); 
 
         auto ret = func_val->func(args, this);
-        current_scope = last_sc;
+        current_scope = current_scope->parent;
         StdLib::current_calling_scope = nullptr;
+
+        if(ret)
+            garbageCollectionRestricter.protectValue(ret);
+
+        garbageCollectIfNeeded();
+
+        if(ret)
+            garbageCollectionRestricter.clearValProtection();
+
+        if(!ret)
+            return RunTimeFactory::makeVal<NullVal>();
         return ret;
     }
     if (func->type != LambdaType){
@@ -449,6 +483,14 @@ RunTimeValue SigmaInterpreter::evaluateFunctionCallExpression(FunctionCallExpres
 
     current_scope = current_scope->parent;
     current_scope = last_scope;
+
+    if(return_val)
+        garbageCollectionRestricter.protectValue(return_val);
+
+    garbageCollectIfNeeded();
+
+    if(return_val)
+        garbageCollectionRestricter.clearValProtection();
 
     return return_val;
 };
@@ -508,7 +550,6 @@ RunTimeValue SigmaInterpreter::
 
 RunTimeValue SigmaInterpreter::evaluateIndexReInitStatement(IndexReInitStatement* stmt) {
     RunTimeVal* val = dynamic_cast<ObjectVal*>(evaluate(stmt->array_expr));
-
     Util::SigmaInterpreterHelper::cvtToPrimitiveIfWrapper(&val);
 
     auto latest_num = 
@@ -530,20 +571,24 @@ RunTimeValue SigmaInterpreter::evaluateIndexReInitStatement(IndexReInitStatement
         return nullptr;
     }
     auto latest_val = static_cast<ArrayVal*>(val);
-    if(latest_val->vals[static_cast<int>(latest_num->num)]->type == RefrenceType){
+
+    if(latest_val->vals[static_cast<int>(latest_num->num)] && latest_val->vals[static_cast<int>(latest_num->num)]->type == RefrenceType){
         auto v = 
             static_cast<RefrenceVal*>(latest_val->vals[static_cast<int>(latest_num->num)]);
         *v->val = evaluate(stmt->val);
         return nullptr;
     }
-    auto actual_val = evaluate(stmt->val);
 
-    if(shouldICopy(actual_val))
+    auto actual_val = evaluate(stmt->val);
+    if(shouldICopy(actual_val)){
+        
         latest_val->vals[static_cast<int>(latest_num->num)]->setValue(actual_val);
+    }
     else {
         latest_val->vals[static_cast<int>(latest_num->num)] = actual_val;
     }
     
+    garbageCollectIfNeeded();
     return nullptr;
 };
 
@@ -634,7 +679,23 @@ RunTimeValue SigmaInterpreter::evaluateStringBinaryExpression(StringVal* left,
 
 RunTimeValue SigmaInterpreter::
     evaluateStructDeclStatement(StructDeclerationStatement* stmt) {
-    struct_decls.insert({stmt->struct_name, stmt->props});
+    auto constructor_itr = std::find_if(stmt->props.begin(), stmt->props.end(),
+        [](VariableDecleration* decl){
+        return decl->var_name == "constructor" && decl->expr->type == LambdaExpressionType;
+    });
+
+    if(constructor_itr != stmt->props.end()){
+        VariableDecleration* constructor_decl = *constructor_itr;
+        stmt->props.erase(constructor_itr);
+
+        struct_decls.insert({stmt->struct_name, {stmt->props, 
+            static_cast<LambdaExpression*>(constructor_decl->expr)}});
+
+        return nullptr;
+    }
+
+
+    struct_decls.insert({stmt->struct_name, {stmt->props, nullptr}});
 
     return nullptr;
 };
@@ -664,6 +725,8 @@ RunTimeValue SigmaInterpreter::evaluateMemberReInitStatement(
     else {
         latest_val->vals[latest_str] = actual_v;
     }
+
+    garbageCollectIfNeeded();
     return nullptr;
 };
 

@@ -80,7 +80,7 @@ RunTimeValue DocumentLib::getElementsByClassName(COMPILED_FUNC_ARGS) {
 RunTimeVal* DocumentLib::setOnClick(COMPILED_FUNC_ARGS) {
     HtmlElementVal* elm_val = static_cast<HtmlElementVal*>(args[0]);
     LambdaVal* lambda_val = static_cast<LambdaVal*>(args[1]);
-    interpreter->registered_event_handlers.push_back(lambda_val);
+    interpreter->garbageCollectionRestricter.registerEventHandler(lambda_val);
 
     Gtk::Button* btn = static_cast<Gtk::Button*>(elm_val->target_tag->tag_information.current_widget);
     btn->signal_clicked().connect([lambda_val, interpreter](){
@@ -211,7 +211,7 @@ RunTimeVal* DocumentLib::connectEventHandler(COMPILED_FUNC_ARGS) {
     StringVal* event_name = static_cast<StringVal*>(args[1]);
     LambdaVal* handler = static_cast<LambdaVal*>(args[2]);
 
-    interpreter->registered_event_handlers.push_back(handler);
+    interpreter->garbageCollectionRestricter.registerEventHandler(handler);
 
     EventPtr evt = event_table.at(event_name->str)(handler);
     evt->bindEventToWidget(elm->target_tag->tag_information.current_widget,

@@ -15,6 +15,9 @@
 #include "../StandardLibrary/TypeWrappers/ArrayWrapper.h"
 #include "../StandardLibrary/TypeWrappers/StringWrapper.h"
 #include <algorithm>
+#include <memory>
+#include <iostream>
+#include <stdexcept>
 #include <vector>
 
 void Util::SigmaInterpreterHelper::initializeStandardLibraries(std::shared_ptr<Scope>&
@@ -53,18 +56,60 @@ ObjectVal* Util::SigmaInterpreterHelper::evaluateStruct(SigmaInterpreter* self,
     StructExpression* stmt) {
     if(!self->struct_decls.contains(stmt->struct_name))
         throw std::runtime_error("no struct with name " + stmt->struct_name);
-    std::vector<VariableDecleration*> vecc = self->struct_decls[stmt->struct_name];
+
+    StructDecleration& struct_decleration = self->struct_decls[stmt->struct_name];
+
+    std::vector<VariableDecleration*> vecc = struct_decleration.variable_decls;
     std::unordered_map<std::string, RunTimeVal*> vals;
+
+    LambdaExpression* expr = struct_decleration.constructor;
+
+    if(!expr){
+
+        for(int i = 0; i < stmt->args.size(); i++){
+            vals.insert({ vecc[i]->var_name, self->copyIfRecommended(self->evaluate(stmt->args[i])) });
+        }
+
+        for(int k = stmt->args.size(); k < vecc.size(); k++){
+            vals.insert({ vecc[k]->var_name, self->copyIfRecommended(self->evaluate(vecc[k]->expr))  });
+        }
+
+        ObjectVal* object = RunTimeFactory::makeStruct(std::move(vals));
+
+        return object;
+
+    }
+
+    for(auto& var_decl : vecc){
+        std::cout << var_decl->var_name << " " << var_decl->expr->type << std::endl;
+        vals.insert({ var_decl->var_name, self->copyIfRecommended(self->evaluate(var_decl->expr))  });
+    }
+
+    ObjectVal* object = RunTimeFactory::makeStruct(std::move(vals));
+
+
+    LambdaVal* lambda = Util::SigmaInterpreterHelper::evaluateLambda(self->current_scope, expr);
+
+    std::shared_ptr<Scope> this_keyword_scope = std::make_shared<Scope>(self->current_scope);
+    self->current_scope = this_keyword_scope;
+
+    self->current_scope->declareVar("this", { object, true });
+
+
+    std::vector<RunTimeVal*> evaluated_args(stmt->args.size());
+    std::transform(stmt->args.begin(), stmt->args.end(), evaluated_args.begin(),
+        [&](Expression* target_expr){
+            return self->copyIfRecommended(self->evaluate(target_expr));
+        });
     
-    for(int i = 0; i < stmt->args.size(); i++){
-        vals.insert({ vecc[i]->var_name, self->evaluate(stmt->args[i]) });
-    }
+    if(evaluated_args.size() != lambda->params.size())
+        throw std::runtime_error("the argument count of a constructor call didn't match the specified parameter count of the constructor function");
+    self->evaluateAnonymousLambdaCall(lambda, {evaluated_args});
 
-    for(int k = stmt->args.size(); k < vecc.size(); k++){
-        vals.insert({ vecc[k]->var_name, self->evaluate(vecc[k]->expr)  });
-    }
+    self->current_scope = self->current_scope->parent;
 
-    return RunTimeFactory::makeStruct(std::move(vals));
+    return object;
+    
 };
 
 RunTimeVal* Util::SigmaInterpreterHelper::evaluteIdentifier(SigmaInterpreter* self,
@@ -97,6 +142,7 @@ RunTimeVal* Util::SigmaInterpreterHelper::evaluateIfCodeBlock(SigmaInterpreter* 
         }
     }
     self->current_scope = self->current_scope->parent;
+    self->garbageCollectIfNeeded();
     return nullptr;
 };
 

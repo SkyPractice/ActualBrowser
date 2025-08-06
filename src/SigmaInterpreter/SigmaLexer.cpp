@@ -11,9 +11,11 @@ std::vector<SigmaToken> SigmaLexer::tokenize(std::string& code) {
     std::vector<SigmaToken> tokens;
 
     while(current_char != '\0' && current_pos < code.size()){
-        while(skip_chars.contains(current_char))
+        while(skip_chars.contains(current_char) && current_pos < code.size())
             advance();
 
+        if(current_pos >= code.size())
+            break;
         if(isalpha(current_char)){
             std::string str;
             while(isalpha(current_char) || current_char == '_' || isdigit(current_char)){
@@ -28,8 +30,10 @@ std::vector<SigmaToken> SigmaLexer::tokenize(std::string& code) {
         else if (current_char == '/' && code[current_pos + 1] == '/'){
             advance();
             advance();
-            while(current_char != '\n')
+            while(current_char != '\n' && current_pos < code.size())
                 advance();
+            if(current_pos >= code.size())
+                break;
             advance();
         }
         else if (current_char == '\"'){

@@ -1,3 +1,4 @@
+#include "GarbageCollector/GarbageCollector.h"
 #include "RunTime.h"
 #include "SigmaInterpreter.h"
 #include <algorithm>
@@ -103,15 +104,30 @@ RunTimeValue SigmaInterpreter::
     current_scope = current_scope->parent;
     current_scope = last_scope;
 
+    if(return_val)
+      garbageCollectionRestricter.protectValue(return_val);
+
+    garbageCollectIfNeeded();
+
+    if(return_val)
+      garbageCollectionRestricter.clearValProtection();
+
     return return_val;
 }
 std::vector<RunTimeVal*> SigmaInterpreter::getAccessibleValues() {
   std::vector<RunTimeVal*> mark_vals = current_scope->flatten_as_vec();
-  mark_vals.insert(mark_vals.end(), registered_event_handlers.
-      begin(), registered_event_handlers.end());
-  mark_vals.insert(mark_vals.end(), wrapper_types_cache.begin(), wrapper_types_cache.end());
-  for(auto& lambda : async_lambdas){
-      mark_vals.push_back(lambda.second);
-  }
+  std::vector<RunTimeVal*> restricted_vals = garbageCollectionRestricter.getRestrictedValues();
+
+  mark_vals.insert(mark_vals.end(), restricted_vals.begin(), restricted_vals.end());
+
   return mark_vals;
+};
+void SigmaInterpreter::garbageCollectIfNeeded() {
+  if(GarbageCollector::massiveGCShouldRun()){
+      std::cout << "garbage collecting";
+
+    std::vector<RunTimeVal*> values = getAccessibleValues();
+    GarbageCollector::mark(values);
+    GarbageCollector::sweep(RunTimeMemory::pool);
+  }
 };

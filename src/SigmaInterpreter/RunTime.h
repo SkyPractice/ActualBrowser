@@ -1,6 +1,8 @@
 #pragma once
 #include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <cstddef>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -10,8 +12,6 @@
 #include "SigmaAst.h"
 #include <unordered_map>
 #include <memory_resource>
-#include <iostream>
-#include <atomic>
 #include "../Interpreter/Ast.h"
 
 class SigmaInterpreter;
@@ -19,7 +19,8 @@ class SigmaInterpreter;
 
 enum RunTimeValType {
     NumType, StringType, CharType, BoolType, LambdaType, ArrayType, StructType, ReturnType,
-    BreakType, ContinueType, NativeFunctionType, RefrenceType, BinaryType, HtmlType, AnyType
+    BreakType, ContinueType, NativeFunctionType, RefrenceType, BinaryType, HtmlType, AnyType,
+    NullType
 };
 
 
@@ -34,8 +35,10 @@ public:
     bool invincible = false;
     bool marked = false;
     bool is_l_val = false;
+
     RunTimeValType type;
-    RunTimeVal(RunTimeValType t): type(t) {};
+    RunTimeVal(RunTimeValType t): type(t) {
+    };
 
     virtual RunTimeVal* clone() = 0;
     virtual ~RunTimeVal() {};
@@ -54,6 +57,20 @@ public:
         (*ptr)->~RunTimeVal();
         target_pool.deallocate((*ptr), size, alignment);
         *ptr = nullptr;
+    }
+};
+
+class NullVal : public RunTimeVal {
+public:
+    NullVal(): RunTimeVal(NullType) {};
+
+    RunTimeVal* clone() override;
+
+    size_t getSize() override { return sizeof(NullVal); };
+    size_t getAlignment() override { return alignof(NullVal); }
+
+    std::string getString() override {
+        return "<Null>";
     }
 };
 
@@ -367,6 +384,7 @@ public:
 class RunTimeFactory {
 public:
     static std::vector<RunTimeVal*>* target_alloc_vec;
+
     template<typename ValType, typename ...ArgsType>
     static ValType* makeVal(ArgsType... args) {
         std::lock_guard<std::mutex> lock(RunTimeMemory::pool_mut);

@@ -1,4 +1,5 @@
 #include "RunTime.h"
+#include "GarbageCollector/GarbageCollector.h"
 #include <algorithm>
 #include <iomanip>
 #include <memory>
@@ -57,6 +58,9 @@ RefrenceVal* RunTimeFactory::makeRefrence(RunTimeVal** val){
     return makeVal<RefrenceVal>(val);
 }
 
+RunTimeVal* NullVal::clone() {
+    return this;
+};
 RunTimeVal* NumVal::clone() { return RunTimeFactory::makeNum(num); };
 RunTimeVal* StringVal::clone() { return RunTimeFactory::makeString(str); };
 RunTimeVal* CharVal::clone() { return nullptr; };

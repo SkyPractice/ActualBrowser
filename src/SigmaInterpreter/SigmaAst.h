@@ -14,7 +14,7 @@ enum SigmaAstType {
     FunctionCallExpressionType, ContinueStatementType, ReturnStatementType, BreakStatementType,
     MemberReInitExpressionType, IncrementExpressionType, DecrementExpressionType, 
     CompoundAssignmentStatementType, NegativeExpressionType,
-    JsObjectExprType, CharExpressionType
+    JsObjectExprType, CharExpressionType, NullExpressionType
 };
 
 class Statement {
@@ -52,6 +52,11 @@ public:
     std::string str;
 
     StringExpression(std::string stri): Expression(StringExpressionType), str(std::move(stri)) {};
+};
+
+class NullExpression : public Expression {
+public:
+    NullExpression(): Expression(NullExpressionType) {};
 };
 
 class CharExpression : public Expression {

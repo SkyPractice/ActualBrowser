@@ -32,6 +32,8 @@ Stmt SigmaParser::parseStmt() {
         case Var:
         case Const:
             return parseVarDeclStmt();
+        case Function:
+            return parseFunctionDecl();
         case If:
             return parseIfStmt();
         case While:
@@ -72,6 +74,31 @@ Stmt SigmaParser::parseStmt() {
         }break;
     }
 
+};
+Stmt SigmaParser::parseFunctionDecl() {
+    const SigmaToken func = advance();
+    const std::string name = advance().symbol;
+
+    const SigmaToken open_paren = advance();
+    std::vector<std::string> strs;
+
+    while(itr->type != CloseParen){
+        strs.push_back(advance().symbol);
+        if(itr->type == Comma) advance();
+        else break;
+    }
+
+    const SigmaToken close_paren = advance();
+    const SigmaToken open_brace = advance();
+
+    std::vector<Stmt> stmts;
+    while(itr->type != CloseBrace)
+        stmts.push_back(parseStmt());
+    advance();
+
+    LambdaExpression* lambda_expr = makeAst<LambdaExpression>(strs, stmts);
+
+    return makeAst<VariableDecleration>(name, lambda_expr, true);
 };
 Stmt SigmaParser::parseVarDeclStmt() {
     const SigmaToken word = advance();
@@ -211,6 +238,9 @@ Expr SigmaParser::parsePrimaryExpr() {
         case Decrement:
             advance();
             return makeAst<IncrementExpression>(parseExpr() , -1);
+        case Null:
+            advance();
+            return makeAst<NullExpression>();
         case Negative:
         default: throw std::runtime_error("Expression Type Not Implemented " + std::to_string(itr->type));
     }

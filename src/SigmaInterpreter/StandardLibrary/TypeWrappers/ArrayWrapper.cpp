@@ -212,8 +212,8 @@ RunTimeVal* ArrayWrapper::resize(COMPILED_FUNC_ARGS) {
     ObjectVal* object = interpreter->getThis();
     ArrayVal* primitive = static_cast<ArrayVal*>(object->vals["primitive"]);
     NumVal* new_size = static_cast<NumVal*>(args[0]);
-    primitive->vals.resize((long)new_size);
     
+    primitive->vals.resize((size_t)new_size->num);
     return nullptr;
 };
 RunTimeVal* ArrayWrapper::slice(COMPILED_FUNC_ARGS) {
